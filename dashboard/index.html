@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - User Management System</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script type="module" src="../assets/js/app.js" defer></script>
+</head>
+<body>
+    <!-- Dashboard Page -->
+    <div id="dashboardPage" class="dashboard-page">
+        <!-- Navbar -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <i class="fas fa-users-cog"></i>
+                <span>User Management</span>
+            </div>
+            <div class="nav-menu">
+                <a href="/dashboard/" class="nav-item active">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+                <a href="/kelola-user/" class="nav-item">
+                    <i class="fas fa-users"></i> Kelola User
+                </a>
+            </div>
+            <div class="nav-user">
+                <span id="userEmail"></span>
+                <button id="signOutBtn" class="btn-logout">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="welcome-section">
+                <h1>Dashboard</h1>
+                <p id="welcomeMessage"></p>
+            </div>
+
+            <div class="stats-container">
+                <div class="stat-card">
+                    <i class="fas fa-users"></i>
+                    <div class="stat-info">
+                        <h3>Total Users</h3>
+                        <p class="stat-number">0</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-user-check"></i>
+                    <div class="stat-info">
+                        <h3>Active Today</h3>
+                        <p class="stat-number">0</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-user-plus"></i>
+                    <div class="stat-info">
+                        <h3>New This Week</h3>
+                        <p class="stat-number">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Redirect Message -->
+    <div id="loginMessage" class="login-redirect" hidden>
+        <i class="fas fa-lock"></i>
+        <h2>Please Login First</h2>
+        <p>Redirecting to login page...</p>
+    </div>
+</body>
+</html>
