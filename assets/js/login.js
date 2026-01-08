@@ -21,7 +21,7 @@ const auth = getAuth(app);
 onAuthStateChanged(auth, (user) => {
     if (user) {
         // Redirect to dashboard if already logged in
-        window.location.href = '/dashboard/';
+        window.location.href = '/Project_TA/dashboard/';
     }
 });
 
@@ -39,7 +39,7 @@ document.getElementById('signInBtn').addEventListener('click', () => {
         .then((userCredential) => {
             console.log('User signed in:', userCredential.user);
             // Redirect to dashboard
-            window.location.href = '/dashboard/';
+            window.location.href = '/Project_TA/dashboard/';
         })
         .catch((error) => {
             console.error('Sign in error:', error.message);

@@ -29,7 +29,7 @@ onAuthStateChanged(auth, (user) => {
         document.getElementById('dashboardPage').hidden = true;
         document.getElementById('loginMessage').hidden = false;
         setTimeout(() => {
-            window.location.href = '/';
+            window.location.href = '/Project_TA/';
         }, 2000);
     }
 });
@@ -38,7 +38,7 @@ onAuthStateChanged(auth, (user) => {
 document.getElementById('signOutBtn').addEventListener('click', () => {
     signOut(auth).then(() => {
         console.log('User signed out');
-        window.location.href = '/';
+        window.location.href = '/Project_TA/';
     }).catch((error) => {
         console.error(error);
     });
