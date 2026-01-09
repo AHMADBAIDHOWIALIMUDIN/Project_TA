@@ -14,14 +14,17 @@
         <!-- Navbar -->
         <nav class="navbar">
             <div class="nav-brand">
-                <i class="fas fa-users-cog"></i>
-                <span>User Management</span>
+                <img src="../assets/img/logo.png" alt="Logo" class="nav-logo">
+                <span class="brand-name">Smart_Pot</span>
             </div>
             <div class="nav-menu">
-                <a href="/Project_TA/dashboard/" class="nav-item active">
+                <a href="./" class="nav-item active">
                     <i class="fas fa-home"></i> Dashboard
                 </a>
-                <a href="/Project_TA/kelola-user/" class="nav-item">
+                <a href="../controller/" class="nav-item">
+                    <i class="fas fa-sliders-h"></i> Controller
+                </a>
+                <a href="../kelola-user/" class="nav-item">
                     <i class="fas fa-users"></i> Kelola User
                 </a>
             </div>
@@ -35,31 +38,96 @@
 
         <!-- Main Content -->
         <div class="main-content">
-            <div class="welcome-section">
-                <h1>Dashboard</h1>
-                <p id="welcomeMessage"></p>
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1><i class="fas fa-chart-line"></i> Monitoring</h1>
+                <p>Pemantauan sensor dan status sistem Smart Pot</p>
             </div>
 
-            <div class="stats-container">
-                <div class="stat-card">
-                    <i class="fas fa-users"></i>
-                    <div class="stat-info">
-                        <h3>Total Users</h3>
-                        <p class="stat-number">0</p>
+            <!-- Sensor Cards -->
+            <div class="sensor-cards">
+                <div class="sensor-card sensor-temp">
+                    <div class="sensor-value">
+                        <span class="value" id="dhtTemp">15</span>
+                        <span class="unit">°C</span>
+                    </div>
+                    <div class="sensor-label">SUHU DHT</div>
+                    <div class="sensor-icon">
+                        <i class="fas fa-thermometer-half"></i>
                     </div>
                 </div>
-                <div class="stat-card">
-                    <i class="fas fa-user-check"></i>
-                    <div class="stat-info">
-                        <h3>Active Today</h3>
-                        <p class="stat-number">0</p>
+
+                <div class="sensor-card sensor-light">
+                    <div class="sensor-value">
+                        <span class="value" id="sunLight">25</span>
+                        <span class="status">Panas</span>
+                    </div>
+                    <div class="sensor-label">CAHAYA MATAHARI</div>
+                    <div class="sensor-icon">
+                        <i class="fas fa-sun"></i>
                     </div>
                 </div>
-                <div class="stat-card">
-                    <i class="fas fa-user-plus"></i>
-                    <div class="stat-info">
-                        <h3>New This Week</h3>
-                        <p class="stat-number">0</p>
+            </div>
+
+            <!-- Smart Pots -->
+            <div class="pots-container">
+                <div class="pot pot-1">
+                    <div class="pot-header">POT 1</div>
+                    <div class="pot-content">
+                        <div class="pot-label">Soil Mosture</div>
+                        <div class="pot-value" id="moisture1">4</div>
+                        <div class="pot-toggle" data-pot="1" onclick="togglePot(1)">
+                            <span class="toggle-status" id="status1">ON</span>
+                            <div class="toggle-indicator" id="indicator1"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pot pot-2">
+                    <div class="pot-header">POT 2</div>
+                    <div class="pot-content">
+                        <div class="pot-label">Soil Mosture</div>
+                        <div class="pot-value" id="moisture2">2</div>
+                        <div class="pot-toggle" data-pot="2" onclick="togglePot(2)">
+                            <span class="toggle-status" id="status2">ON</span>
+                            <div class="toggle-indicator" id="indicator2"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pot pot-3">
+                    <div class="pot-header">POT 3</div>
+                    <div class="pot-content">
+                        <div class="pot-label">Soil Mosture</div>
+                        <div class="pot-value" id="moisture3">6</div>
+                        <div class="pot-toggle" data-pot="3" onclick="togglePot(3)">
+                            <span class="toggle-status" id="status3">ON</span>
+                            <div class="toggle-indicator" id="indicator3"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pot pot-4">
+                    <div class="pot-header">POT 4</div>
+                    <div class="pot-content">
+                        <div class="pot-label">Soil Mosture</div>
+                        <div class="pot-value" id="moisture4">8</div>
+                        <div class="pot-toggle" data-pot="4" onclick="togglePot(4)">
+                            <span class="toggle-status" id="status4">ON</span>
+                            <div class="toggle-indicator" id="indicator4"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pot pot-5">
+                    <div class="pot-header">POT 5</div>
+                    <div class="pot-content">
+                        <div class="pot-label">Soil Mosture</div>
+                        <div class="pot-value" id="moisture5">10</div>
+                        <div class="pot-toggle" data-pot="5" onclick="togglePot(5)">
+                            <span class="toggle-status" id="status5">ON</span>
+                            <div class="toggle-indicator" id="indicator5"></div>
+                        </div>
                     </div>
                 </div>
             </div>

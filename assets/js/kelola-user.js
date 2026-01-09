@@ -19,6 +19,24 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// Notification function
+function showNotification(message, type = 'success') {
+    const notification = document.getElementById('notification');
+    const messageEl = notification.querySelector('.notification-message');
+    
+    // Remove previous classes
+    notification.classList.remove('success', 'error', 'warning', 'hidden');
+    
+    // Add new class and message
+    notification.classList.add(type);
+    messageEl.textContent = message;
+    
+    // Auto hide after 4 seconds
+    setTimeout(() => {
+        notification.classList.add('hidden');
+    }, 4000);
+}
+
 // Check authentication
 onAuthStateChanged(auth, (user) => {
     if (user) {
@@ -30,7 +48,7 @@ onAuthStateChanged(auth, (user) => {
         document.getElementById('dashboardPage').hidden = true;
         document.getElementById('loginMessage').hidden = false;
         setTimeout(() => {
-            window.location.href = '/Project_TA/';
+            window.location.href = '../index.html';
         }, 2000);
     }
 });
@@ -39,7 +57,7 @@ onAuthStateChanged(auth, (user) => {
 document.getElementById('signOutBtn').addEventListener('click', () => {
     signOut(auth).then(() => {
         console.log('User signed out');
-        window.location.href = '/Project_TA/';
+        window.location.href = '../index.html';
     }).catch((error) => {
         console.error(error);
     });
@@ -51,22 +69,31 @@ document.getElementById('addAccountBtn').addEventListener('click', async () => {
     const password = document.getElementById('newAccountPassword').value;
 
     if (!email || !password) {
-        alert('Email dan password harus diisi!');
+        showNotification('Email dan password harus diisi!', 'warning');
         return;
     }
 
     if (password.length < 6) {
-        alert('Password harus minimal 6 karakter!');
+        showNotification('Password harus minimal 6 karakter!', 'warning');
         return;
     }
 
+    // Disable button to prevent multiple clicks
+    const addBtn = document.getElementById('addAccountBtn');
+    addBtn.disabled = true;
+    addBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Memproses...';
+
     try {
-        // Simpan data admin yang sedang login
+        // Simpan kredensial admin saat ini
         const currentUser = auth.currentUser;
         const adminEmail = currentUser.email;
         
-        // Buat akun baru di Firebase Authentication
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        // Buat instance auth kedua untuk user baru
+        const secondaryApp = initializeApp(firebaseConfig, 'Secondary');
+        const secondaryAuth = getAuth(secondaryApp);
+        
+        // Buat akun baru menggunakan auth instance kedua
+        const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
         const newUser = userCredential.user;
         console.log('Akun baru berhasil dibuat:', newUser);
         
@@ -77,25 +104,42 @@ document.getElementById('addAccountBtn').addEventListener('click', async () => {
             createdAt: new Date()
         });
         
-        // Logout akun baru yang baru dibuat
-        await signOut(auth);
+        // Logout dari auth instance kedua
+        await signOut(secondaryAuth);
         
-        // Minta password admin untuk login kembali
-        const adminPassword = prompt('Akun berhasil dibuat! Masukkan password Anda untuk login kembali:');
+        // Hapus secondary app
+        await secondaryApp.delete();
         
-        if (adminPassword) {
-            await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
-            
-            // Clear form
-            document.getElementById('newAccountEmail').value = '';
-            document.getElementById('newAccountPassword').value = '';
-            
-            alert('Akun baru berhasil ditambahkan ke Firebase Authentication!');
-            loadUsers();
-        }
+        // Clear form
+        document.getElementById('newAccountEmail').value = '';
+        document.getElementById('newAccountPassword').value = '';
+        
+        // Show success notification
+        showNotification(`Akun ${email} berhasil ditambahkan!`, 'success');
+        
+        // Reload user list
+        loadUsers();
+        
     } catch (error) {
         console.error('Error adding account:', error);
-        alert('Error: ' + error.message);
+        let errorMessage = 'Terjadi kesalahan saat menambah akun';
+        
+        // Handle specific error codes
+        if (error.code === 'auth/email-already-in-use') {
+            errorMessage = 'Email sudah digunakan!';
+        } else if (error.code === 'auth/invalid-email') {
+            errorMessage = 'Format email tidak valid!';
+        } else if (error.code === 'auth/weak-password') {
+            errorMessage = 'Password terlalu lemah!';
+        } else {
+            errorMessage = error.message;
+        }
+        
+        showNotification(errorMessage, 'error');
+    } finally {
+        // Re-enable button
+        addBtn.disabled = false;
+        addBtn.innerHTML = '<i class="fas fa-plus-circle"></i> Tambah User';
     }
 });
 
