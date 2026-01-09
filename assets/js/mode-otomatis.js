@@ -79,22 +79,22 @@ window.toggleMainMode = function() {
     const mainToggle = document.getElementById('mainToggle');
     const statusIndicator = document.getElementById('statusIndicator');
     const statusText = document.getElementById('statusText');
-    const globalMinInput = document.getElementById('globalMin');
-    const globalMaxInput = document.getElementById('globalMax');
+    const globalMinSlider = document.getElementById('globalMin');
+    const globalMaxSlider = document.getElementById('globalMax');
     
     if (mainModeActive) {
         mainToggle.classList.add('active');
         statusIndicator.classList.add('active');
         statusText.textContent = 'Aktif';
-        globalMinInput.disabled = false;
-        globalMaxInput.disabled = false;
+        globalMinSlider.disabled = false;
+        globalMaxSlider.disabled = false;
         showNotification('Mode Otomatis diaktifkan', 'success');
     } else {
         mainToggle.classList.remove('active');
         statusIndicator.classList.remove('active');
         statusText.textContent = 'Tidak Aktif';
-        globalMinInput.disabled = true;
-        globalMaxInput.disabled = true;
+        globalMinSlider.disabled = true;
+        globalMaxSlider.disabled = true;
         showNotification('Mode Otomatis dinonaktifkan', 'info');
     }
     
@@ -107,7 +107,6 @@ window.toggleMainMode = function() {
 updateSensorValues();
 setInterval(updateSensorValues, 5000);
 
-// Save settings handler - removed since button is removed
 // Load saved settings on page load
 window.addEventListener('DOMContentLoaded', () => {
     const savedMode = localStorage.getItem('mainModeActive');
@@ -121,77 +120,79 @@ window.addEventListener('DOMContentLoaded', () => {
     
     if (savedMin) {
         document.getElementById('globalMin').value = savedMin;
+        document.getElementById('minValue').textContent = savedMin;
     }
     
     if (savedMax) {
         document.getElementById('globalMax').value = savedMax;
+        document.getElementById('maxValue').textContent = savedMax;
     }
     
-    // Save and validate min value when changed
-    document.getElementById('globalMin').addEventListener('change', function() {
-        let value = parseInt(this.value);
+    // Update display when slider changes - Minimum
+    document.getElementById('globalMin').addEventListener('input', function() {
+        const value = parseInt(this.value);
         const maxValue = parseInt(document.getElementById('globalMax').value);
         
-        // Validate range
-        if (value < 5) {
-            value = 5;
-            this.value = 5;
-            showNotification('Kelembaban minimum tidak boleh kurang dari 5%', 'warning');
-        } else if (value > 30) {
-            value = 30;
-            this.value = 30;
-            showNotification('Kelembaban minimum tidak boleh lebih dari 30%', 'warning');
-        } else if (value >= maxValue) {
-            value = maxValue - 1;
-            this.value = value;
+        document.getElementById('minValue').textContent = value;
+        
+        // Validate: min should be less than max
+        if (value >= maxValue) {
+            const newMin = maxValue - 1;
+            this.value = newMin;
+            document.getElementById('minValue').textContent = newMin;
+        }
+    });
+    
+    // Save minimum value when slider stops
+    document.getElementById('globalMin').addEventListener('change', function() {
+        const value = parseInt(this.value);
+        const maxValue = parseInt(document.getElementById('globalMax').value);
+        
+        let finalValue = value;
+        
+        // Validate: min should be less than max
+        if (value >= maxValue) {
+            finalValue = maxValue - 1;
+            this.value = finalValue;
+            document.getElementById('minValue').textContent = finalValue;
             showNotification('Kelembaban minimum harus lebih kecil dari maksimum', 'warning');
         }
         
-        localStorage.setItem('globalMinValue', value);
-        showNotification('Kelembaban minimum: ' + value + '%', 'success');
+        localStorage.setItem('globalMinValue', finalValue);
+        showNotification('Kelembaban minimum: ' + finalValue + '%', 'success');
     });
     
-    // Save and validate max value when changed
-    document.getElementById('globalMax').addEventListener('change', function() {
-        let value = parseInt(this.value);
+    // Update display when slider changes - Maximum
+    document.getElementById('globalMax').addEventListener('input', function() {
+        const value = parseInt(this.value);
         const minValue = parseInt(document.getElementById('globalMin').value);
         
-        // Validate range
-        if (value < 5) {
-            value = 5;
-            this.value = 5;
-            showNotification('Kelembaban maksimum tidak boleh kurang dari 5%', 'warning');
-        } else if (value > 100) {
-            value = 100;
-            this.value = 100;
-            showNotification('Kelembaban maksimum tidak boleh lebih dari 100%', 'warning');
-        } else if (value <= minValue) {
-            value = minValue + 1;
-            this.value = value;
+        document.getElementById('maxValue').textContent = value;
+        
+        // Validate: max should be greater than min
+        if (value <= minValue) {
+            const newMax = minValue + 1;
+            this.value = newMax;
+            document.getElementById('maxValue').textContent = newMax;
+        }
+    });
+    
+    // Save maximum value when slider stops
+    document.getElementById('globalMax').addEventListener('change', function() {
+        const value = parseInt(this.value);
+        const minValue = parseInt(document.getElementById('globalMin').value);
+        
+        let finalValue = value;
+        
+        // Validate: max should be greater than min
+        if (value <= minValue) {
+            finalValue = minValue + 1;
+            this.value = finalValue;
+            document.getElementById('maxValue').textContent = finalValue;
             showNotification('Kelembaban maksimum harus lebih besar dari minimum', 'warning');
         }
         
-        localStorage.setItem('globalMaxValue', value);
-        showNotification('Kelembaban maksimum: ' + value + '%', 'success');
-    });
-    
-    // Add input validation on input event for min
-    document.getElementById('globalMin').addEventListener('input', function() {
-        let value = parseInt(this.value);
-        if (value < 5) {
-            this.value = 5;
-        } else if (value > 30) {
-            this.value = 30;
-        }
-    });
-    
-    // Add input validation on input event for max
-    document.getElementById('globalMax').addEventListener('input', function() {
-        let value = parseInt(this.value);
-        if (value < 5) {
-            this.value = 5;
-        } else if (value > 100) {
-            this.value = 100;
-        }
+        localStorage.setItem('globalMaxValue', finalValue);
+        showNotification('Kelembaban maksimum: ' + finalValue + '%', 'success');
     });
 });

@@ -24,6 +24,9 @@
                 <a href="../controller/" class="nav-item active">
                     <i class="fas fa-sliders-h"></i> Controller
                 </a>
+                <a href="../histori/" class="nav-item">
+                    <i class="fas fa-history"></i> Histori
+                </a>
                 <a href="../kelola-user/" class="nav-item">
                     <i class="fas fa-users"></i> Kelola User
                 </a>
@@ -79,14 +82,16 @@
                 <div class="kelembaban-settings-card">
                     <div class="kelembaban-item">
                         <label class="kelembaban-label">Kelembaban Minimum %</label>
-                        <div class="kelembaban-input-wrapper">
-                            <input type="number" class="kelembaban-input-modern" id="globalMin" value="5" min="5" max="30" disabled>
+                        <div class="slider-value" id="minValue">0</div>
+                        <div class="kelembaban-slider-wrapper">
+                            <input type="range" class="kelembaban-slider" id="globalMin" value="0" min="0" max="100" step="1" disabled>
                         </div>
                     </div>
                     <div class="kelembaban-item">
                         <label class="kelembaban-label">Kelembaban Maksimum %</label>
-                        <div class="kelembaban-input-wrapper">
-                            <input type="number" class="kelembaban-input-modern" id="globalMax" value="30" min="5" max="100" disabled>
+                        <div class="slider-value" id="maxValue">30</div>
+                        <div class="kelembaban-slider-wrapper">
+                            <input type="range" class="kelembaban-slider" id="globalMax" value="30" min="0" max="100" step="1" disabled>
                         </div>
                     </div>
                 </div>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histori - Smart Pot</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script type="module" src="../assets/js/histori.js" defer></script>
+</head>
+<body>
+    <!-- Dashboard Page -->
+    <div id="dashboardPage" class="dashboard-page">
+        <!-- Navbar -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <img src="../assets/img/logo.png" alt="Logo" class="nav-logo">
+                <span class="brand-name">Smart_Pot</span>
+            </div>
+            <div class="nav-menu">
+                <a href="../dashboard/" class="nav-item">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+                <a href="../controller/" class="nav-item">
+                    <i class="fas fa-sliders-h"></i> Controller
+                </a>
+                <a href="../histori/" class="nav-item active">
+                    <i class="fas fa-history"></i> Histori
+                </a>
+                <a href="../kelola-user/" class="nav-item">
+                    <i class="fas fa-users"></i> Kelola User
+                </a>
+            </div>
+            <div class="nav-user">
+                <span id="userEmail"></span>
+                <button id="signOutBtn" class="btn-logout">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1><i class="fas fa-history"></i> Histori Monitoring</h1>
+                <p>Riwayat data sensor dan aktivitas penyiraman</p>
+            </div>
+
+            <!-- Filter Section -->
+            <div class="filter-section">
+                <div class="filter-group">
+                    <label>Tanggal Mulai:</label>
+                    <input type="date" id="startDate" class="filter-input">
+                </div>
+                <div class="filter-group">
+                    <label>Tanggal Akhir:</label>
+                    <input type="date" id="endDate" class="filter-input">
+                </div>
+                <div class="filter-group">
+                    <label>Pot:</label>
+                    <select id="potFilter" class="filter-input">
+                        <option value="all">Semua Pot</option>
+                        <option value="1">Pot 1</option>
+                        <option value="2">Pot 2</option>
+                        <option value="3">Pot 3</option>
+                        <option value="4">Pot 4</option>
+                        <option value="5">Pot 5</option>
+                    </select>
+                </div>
+                <button class="btn-filter" id="applyFilter">
+                    <i class="fas fa-filter"></i> Filter
+                </button>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="history-stats">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-tint"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="totalWatering">0</h3>
+                        <p>Total Penyiraman</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-temperature-high"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="avgTemp">--</h3>
+                        <p>Rata-rata Suhu</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-droplet"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3 id="avgMoisture">--</h3>
+                        <p>Rata-rata Kelembaban</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Table -->
+            <div class="history-table-container">
+                <h2>Riwayat Aktivitas</h2>
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Tanggal & Waktu</th>
+                            <th>Pot</th>
+                            <th>Suhu (°C)</th>
+                            <th>Cahaya (%)</th>
+                            <th>Kelembaban (%)</th>
+                            <th>Status</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                        <!-- Data will be inserted here by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="notification" class="notification hidden">
+        <i class="notification-icon"></i>
+        <span class="notification-message"></span>
+    </div>
+
+    <!-- Login Redirect Message -->
+    <div id="loginMessage" class="login-redirect" hidden>
+        <i class="fas fa-lock"></i>
+        <h2>Please Login First</h2>
+        <p>Redirecting to login page...</p>
+    </div>
+</body>
+</html>
