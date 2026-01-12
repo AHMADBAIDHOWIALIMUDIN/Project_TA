@@ -1,11 +1,13 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-analytics.js";
 import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyCQWvoDxDyVCuLEDiwammjUIVYxVARzJig",
     authDomain: "project-ta-951b4.firebaseapp.com",
+    databaseURL: "https://project-ta-951b4-default-rtdb.firebaseio.com",
     projectId: "project-ta-951b4",
     storageBucket: "project-ta-951b4.firebasestorage.app",
     messagingSenderId: "217854138058",
@@ -16,6 +18,8 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const database = getDatabase(app);
+const kontrolRef = ref(database, 'kontrol');
 
 // Notification function
 function showNotification(message, type = 'success') {
@@ -59,6 +63,9 @@ document.getElementById('signOutBtn').addEventListener('click', () => {
 
 // Initialize controller
 function initializeController() {
+    // Load data from Firebase
+    loadControllerData();
+    
     // Mode Otomatis - Navigate to ModeOtomatis.html
     const modeOtomatisBtn = document.getElementById('modeOtomatis');
     if (modeOtomatisBtn) {
@@ -71,8 +78,45 @@ function initializeController() {
     const modeWaktuBtn = document.getElementById('modeWaktu');
     if (modeWaktuBtn) {
         modeWaktuBtn.addEventListener('click', function() {
-            showNotification('Mode Waktu akan segera tersedia', 'info');
+            window.location.href = './ModeWaktu.html';
         });
     }
+}
 
+// Load controller data from Firebase
+function loadControllerData() {
+    onValue(kontrolRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const data = snapshot.val();
+            console.log('Controller data loaded:', data);
+            
+            // Update UI if needed
+            // You can add code here to display current values
+        } else {
+            // Initialize default values if not exists
+            initializeDefaultControllerData();
+        }
+    });
+}
+
+// Initialize default controller data in Firebase
+function initializeDefaultControllerData() {
+    const defaultData = {
+        batas_atas: 80,
+        batas_bawah: 30,
+        durasi_1: 5,
+        durasi_2: 5,
+        otomatis: false,
+        waktu: false,
+        waktu_1: "",
+        waktu_2: ""
+    };
+    
+    set(kontrolRef, defaultData)
+        .then(() => {
+            console.log('Default controller data initialized');
+        })
+        .catch((error) => {
+            console.error('Error initializing data:', error);
+        });
 }

@@ -7,8 +7,13 @@
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, #e8e8e8  v 0%, #e8e8e8 100%);
-    min-height: 100vh;
-    overflow: hidden;
+    overflow-x: hidden;
+}
+
+/* Prevent scrolling on all pages except history */
+body:not(.history-page) {
+    overflow-y: hidden;
+    height: 100vh;
 }
 
 /* ===== LOGIN PAGE ===== */
@@ -161,7 +166,6 @@ body {
 
 /* ===== DASHBOARD PAGE ===== */
 .dashboard-page {
-    min-height: 100vh;
     background: #f3f4f6;
 }
 
@@ -265,6 +269,7 @@ body {
 /* Main Content */
 .main-content {
     padding: 40px;
+    padding-bottom: 80px;
     max-width: 1200px;
     margin: 0 auto;
 }
@@ -1033,7 +1038,7 @@ input:checked + .slider:before {
 }
 
 .page-header {
-    text-align: center;
+    text-align: left;
     margin-bottom: 40px;
 }
 
@@ -1050,6 +1055,7 @@ input:checked + .slider:before {
 .page-header p {
     color: #666;
     font-size: 16px;
+    margin-left: 0;
 }
 
 /* Mode Otomatis Header with Toggle */
@@ -1363,7 +1369,7 @@ input:checked + .slider:before {
         flex-direction: column;
         padding: 30px 20px;
     }
-    
+
     .kelembaban-item {
         width: 100%;
     }
@@ -1477,13 +1483,55 @@ input:checked + .slider:before {
     padding: 25px;
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    overflow-x: auto;
 }
 
-.history-table-container h2 {
-    color: #065f46;
+.table-header-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 20px;
-    font-size: 24px;
+}
+
+.entries-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.entries-select {
+    padding: 8px 30px 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 16px;
+}
+
+.search-control {
+    display: flex;
+    align-items: center;
+}
+
+.search-input {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    width: 250px;
+    transition: all 0.3s ease;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
 .history-table {
@@ -1551,21 +1599,113 @@ input:checked + .slider:before {
     color: white;
 }
 
+/* ===== PAGINATION STYLES ===== */
+.pagination-container {
+    margin-top: 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.pagination-info {
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.btn-pagination {
+    padding: 6px 10px;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #374151;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    min-width: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-pagination:hover:not(:disabled) {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.btn-pagination:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.page-numbers {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.btn-page-number {
+    padding: 6px 12px;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #374151;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    min-width: 35px;
+}
+
+.btn-page-number:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.btn-page-number.active {
+    background: #6366f1;
+    color: white;
+    border-color: #6366f1;
+}
+
+.page-dots {
+    color: #9ca3af;
+    font-size: 18px;
+    padding: 0 5px;
+}
+
 @media (max-width: 768px) {
     .filter-section {
         flex-direction: column;
     }
-    
+
     .filter-group {
         width: 100%;
     }
-    
+
     .btn-filter {
         width: 100%;
     }
     
-    .history-table-container {
-        overflow-x: auto;
+    .table-header-controls {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+    }
+    
+    .search-input {
+        width: 100%;
+    }
+    
+    .pagination-container {
+        flex-direction: column;
+        gap: 15px;
     }
 }
 
@@ -1853,12 +1993,101 @@ input:checked + .slider:before {
     .settings-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .page-header h1 {
         font-size: 24px;
     }
-    
+
     .status-card {
         padding: 20px;
+    }
+}
+
+/* ===== MODE WAKTU STYLES ===== */
+.schedule-settings-card {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    margin-top: 30px;
+}
+
+.schedule-settings-card h3 {
+    color: #065f46;
+    margin-bottom: 10px;
+    font-size: 22px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.schedule-subtitle {
+    color: #6b7280;
+    font-size: 14px;
+    margin-bottom: 25px;
+}
+
+.dual-schedule-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-top: 20px;
+}
+
+.schedule-box {
+    background: #e5e7eb;
+    border-radius: 10px;
+    padding: 25px;
+}
+
+.schedule-box h4 {
+    color: #374151;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+
+.schedule-time-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.time-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.time-input-group label {
+    color: #374151;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.time-input {
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    transition: all 0.3s ease;
+}
+
+.time-input:focus {
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.time-input:disabled {
+    background: #f3f4f6;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+@media (max-width: 768px) {
+    .dual-schedule-grid {
+        grid-template-columns: 1fr;
     }
 }

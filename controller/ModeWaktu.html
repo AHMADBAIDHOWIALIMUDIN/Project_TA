@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mode Waktu - Smart Pot</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script type="module" src="../assets/js/mode-waktu.js" defer></script>
+</head>
+<body>
+    <!-- Dashboard Page -->
+    <div id="dashboardPage" class="dashboard-page">
+        <!-- Navbar -->
+        <nav class="navbar">
+            <div class="nav-brand">
+                <img src="../assets/img/logo.png" alt="Logo" class="nav-logo">
+                <span class="brand-name">Smart_Pot</span>
+            </div>
+            <div class="nav-menu">
+                <a href="../dashboard/" class="nav-item">
+                    <i class="fas fa-home"></i> Dashboard
+                </a>
+                <a href="../controller/" class="nav-item active">
+                    <i class="fas fa-sliders-h"></i> Controller
+                </a>
+                <a href="../histori/" class="nav-item">
+                    <i class="fas fa-history"></i> Histori
+                </a>
+                <a href="../kelola-user/" class="nav-item">
+                    <i class="fas fa-users"></i> Kelola User
+                </a>
+            </div>
+            <div class="nav-user">
+                <span id="userEmail"></span>
+                <button id="signOutBtn" class="btn-logout">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Back Button -->
+            <div class="back-nav">
+                <a href="../controller/" class="back-btn">
+                    <i class="fas fa-arrow-left"></i> Kembali ke Mode Kontrol
+                </a>
+            </div>
+
+            <!-- Page Header with Main Toggle -->
+            <div class="page-header-otomatis">
+                <div class="header-left">
+                    <i class="fas fa-clock"></i>
+                    <h1>Mode Pengatur Waktu</h1>
+                </div>
+                <div class="main-toggle-container" onclick="toggleMainMode()">
+                    <div class="main-toggle-switch" id="mainToggle">
+                        <div class="main-toggle-slider"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Container -->
+            <div class="otomatis-container">
+                <!-- Status Card -->
+                <div class="status-card">
+                    <div class="status-header">
+                        <i class="fas fa-info-circle"></i>
+                        <h3>Status Mode Waktu</h3>
+                    </div>
+                    <div class="status-body">
+                        <div class="status-indicator" id="statusIndicator">
+                            <div class="indicator-dot"></div>
+                            <span id="statusText">Tidak Aktif</span>
+                        </div>
+                        <p class="status-description">Sistem akan menyiram semua pot (Pot 1-5) sesuai jadwal waktu pagi dan sore</p>
+                    </div>
+                </div>
+
+                <!-- Schedule Settings Card -->
+                <div class="schedule-settings-card">
+                    <h3><i class="fas fa-calendar-alt"></i> Pengaturan Jadwal Penyiraman</h3>
+                    <p class="schedule-subtitle">Semua pot akan disiram sesuai jadwal yang ditentukan (Pot 1, 2, 3, 4, 5)</p>
+                    
+                    <!-- Two Schedule Grid -->
+                    <div class="dual-schedule-grid">
+                        <!-- Schedule 1 -->
+                        <div class="schedule-box">
+                            <h4>Penyiraman 1</h4>
+                            <div class="schedule-time-inputs">
+                                <div class="time-input-group">
+                                    <label>Waktu Mulai</label>
+                                    <input type="time" id="schedule1Time" class="time-input" disabled>
+                                </div>
+                                <div class="time-input-group">
+                                    <label>Durasi (Detik)</label>
+                                    <input type="number" id="schedule1Duration" class="time-input" min="1" max="300" value="30" disabled>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Schedule 2 -->
+                        <div class="schedule-box">
+                            <h4>Penyiraman 2</h4>
+                            <div class="schedule-time-inputs">
+                                <div class="time-input-group">
+                                    <label>Waktu Mulai</label>
+                                    <input type="time" id="schedule2Time" class="time-input" disabled>
+                                </div>
+                                <div class="time-input-group">
+                                    <label>Durasi (Detik)</label>
+                                    <input type="number" id="schedule2Duration" class="time-input" min="1" max="300" value="15" disabled>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="notification" class="notification hidden">
+        <i class="notification-icon"></i>
+        <span class="notification-message"></span>
+    </div>
+
+    <!-- Login Redirect Message -->
+    <div id="loginMessage" class="login-redirect" hidden>
+        <i class="fas fa-lock"></i>
+        <h2>Please Login First</h2>
+        <p>Redirecting to login page...</p>
+    </div>
+</body>
+</html>

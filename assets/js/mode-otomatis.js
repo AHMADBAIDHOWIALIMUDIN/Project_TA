@@ -1,11 +1,13 @@
 // Import Firebase
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js';
+import { getDatabase, ref, set, get, onValue, update } from 'https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js';
 
 // Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyCQWvoDxDyVCuLEDiwammjUIVYxVARzJig",
     authDomain: "project-ta-951b4.firebaseapp.com",
+    databaseURL: "https://project-ta-951b4-default-rtdb.firebaseio.com",
     projectId: "project-ta-951b4",
     storageBucket: "project-ta-951b4.firebasestorage.app",
     messagingSenderId: "217854138058",
@@ -16,6 +18,8 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const database = getDatabase(app);
+const kontrolRef = ref(database, 'kontrol');
 
 // Notification function
 function showNotification(message, type = 'success') {
@@ -46,6 +50,7 @@ onAuthStateChanged(auth, (user) => {
         document.getElementById('userEmail').textContent = user.email;
         document.getElementById('dashboardPage').style.display = 'block';
         document.getElementById('loginMessage').hidden = true;
+        loadControllerData(); // Load data from Firebase
     } else {
         document.getElementById('dashboardPage').style.display = 'none';
         document.getElementById('loginMessage').hidden = false;
@@ -98,8 +103,14 @@ window.toggleMainMode = function() {
         showNotification('Mode Otomatis dinonaktifkan', 'info');
     }
     
-    // Save state to localStorage
-    localStorage.setItem('mainModeActive', mainModeActive);
+    // Save to Firebase
+    update(kontrolRef, {
+        otomatis: mainModeActive
+    }).catch((error) => {
+        console.error('Error updating Firebase:', error);
+        showNotification('Gagal menyimpan ke server', 'error');
+    });
+    
     console.log('Main mode toggled:', mainModeActive);
 }
 
@@ -107,26 +118,53 @@ window.toggleMainMode = function() {
 updateSensorValues();
 setInterval(updateSensorValues, 5000);
 
+// Load controller data from Firebase
+function loadControllerData() {
+    onValue(kontrolRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const data = snapshot.val();
+            console.log('Controller data loaded:', data);
+            
+            // Update mode status
+            if (data.otomatis !== undefined) {
+                mainModeActive = data.otomatis;
+                const mainToggle = document.getElementById('mainToggle');
+                const statusIndicator = document.getElementById('statusIndicator');
+                const statusText = document.getElementById('statusText');
+                const globalMinSlider = document.getElementById('globalMin');
+                const globalMaxSlider = document.getElementById('globalMax');
+                
+                if (mainModeActive) {
+                    mainToggle.classList.add('active');
+                    statusIndicator.classList.add('active');
+                    statusText.textContent = 'Aktif';
+                    globalMinSlider.disabled = false;
+                    globalMaxSlider.disabled = false;
+                } else {
+                    mainToggle.classList.remove('active');
+                    statusIndicator.classList.remove('active');
+                    statusText.textContent = 'Tidak Aktif';
+                    globalMinSlider.disabled = true;
+                    globalMaxSlider.disabled = true;
+                }
+            }
+            
+            // Update slider values
+            if (data.batas_bawah !== undefined) {
+                document.getElementById('globalMin').value = data.batas_bawah;
+                document.getElementById('minValue').textContent = data.batas_bawah;
+            }
+            
+            if (data.batas_atas !== undefined) {
+                document.getElementById('globalMax').value = data.batas_atas;
+                document.getElementById('maxValue').textContent = data.batas_atas;
+            }
+        }
+    });
+}
+
 // Load saved settings on page load
 window.addEventListener('DOMContentLoaded', () => {
-    const savedMode = localStorage.getItem('mainModeActive');
-    if (savedMode === 'true') {
-        mainModeActive = false; // Set to false first
-        toggleMainMode(); // Then toggle to activate
-    }
-    
-    const savedMin = localStorage.getItem('globalMinValue');
-    const savedMax = localStorage.getItem('globalMaxValue');
-    
-    if (savedMin) {
-        document.getElementById('globalMin').value = savedMin;
-        document.getElementById('minValue').textContent = savedMin;
-    }
-    
-    if (savedMax) {
-        document.getElementById('globalMax').value = savedMax;
-        document.getElementById('maxValue').textContent = savedMax;
-    }
     
     // Update display when slider changes - Minimum
     document.getElementById('globalMin').addEventListener('input', function() {
@@ -158,8 +196,15 @@ window.addEventListener('DOMContentLoaded', () => {
             showNotification('Kelembaban minimum harus lebih kecil dari maksimum', 'warning');
         }
         
-        localStorage.setItem('globalMinValue', finalValue);
-        showNotification('Kelembaban minimum: ' + finalValue + '%', 'success');
+        // Save to Firebase
+        update(kontrolRef, {
+            batas_bawah: finalValue
+        }).then(() => {
+            showNotification('Kelembaban minimum: ' + finalValue + '%', 'success');
+        }).catch((error) => {
+            console.error('Error updating Firebase:', error);
+            showNotification('Gagal menyimpan ke server', 'error');
+        });
     });
     
     // Update display when slider changes - Maximum
@@ -192,7 +237,14 @@ window.addEventListener('DOMContentLoaded', () => {
             showNotification('Kelembaban maksimum harus lebih besar dari minimum', 'warning');
         }
         
-        localStorage.setItem('globalMaxValue', finalValue);
-        showNotification('Kelembaban maksimum: ' + finalValue + '%', 'success');
+        // Save to Firebase
+        update(kontrolRef, {
+            batas_atas: finalValue
+        }).then(() => {
+            showNotification('Kelembaban maksimum: ' + finalValue + '%', 'success');
+        }).catch((error) => {
+            console.error('Error updating Firebase:', error);
+            showNotification('Gagal menyimpan ke server', 'error');
+        });
     });
 });
