@@ -1,6 +1,8 @@
+// mode-waktu.js - Mode Waktu Controller with CRUD
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { getDatabase, ref, set, get, onValue, update } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, get, push, update, remove } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -18,27 +20,37 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const database = getDatabase(app);
-const kontrolRef = ref(database, 'kontrol');
 
-// Global state
-let isMainModeActive = false;
-let scheduleSettings = {
-    schedule1: { time: '', duration: 30 },
-    schedule2: { time: '', duration: 15 }
-};
+let schedules = [];
+let isPageLoaded = false;
 
 // Notification function
 function showNotification(message, type = 'success') {
     const notification = document.getElementById('notification');
-    const messageEl = notification.querySelector('.notification-message');
-    
-    notification.classList.remove('success', 'error', 'warning', 'hidden');
-    notification.classList.add(type);
-    messageEl.textContent = message;
-    
-    setTimeout(() => {
-        notification.classList.add('hidden');
-    }, 4000);
+    if (!notification) {
+        const notif = document.createElement('div');
+        notif.id = 'notification';
+        notif.className = `notification ${type}`;
+        notif.textContent = message;
+        document.body.appendChild(notif);
+        
+        setTimeout(() => {
+            notif.classList.add('show');
+        }, 10);
+        
+        setTimeout(() => {
+            notif.classList.remove('show');
+            setTimeout(() => notif.remove(), 300);
+        }, 3000);
+    } else {
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        notification.classList.add('show');
+        
+        setTimeout(() => {
+            notification.classList.remove('show');
+        }, 3000);
+    }
 }
 
 // Authentication check
@@ -58,7 +70,7 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // Logout handler
-document.getElementById('signOutBtn').addEventListener('click', async () => {
+document.getElementById('signOutBtn')?.addEventListener('click', async () => {
     try {
         await signOut(auth);
         window.location.href = '../index.html';
@@ -67,164 +79,354 @@ document.getElementById('signOutBtn').addEventListener('click', async () => {
     }
 });
 
-// Toggle main mode
-window.toggleMainMode = function() {
-    isMainModeActive = !isMainModeActive;
-    const mainToggle = document.getElementById('mainToggle');
-    const statusIndicator = document.getElementById('statusIndicator');
-    const statusText = document.getElementById('statusText');
-    
-    if (isMainModeActive) {
-        mainToggle.classList.add('active');
-        statusIndicator.classList.add('active');
-        statusText.textContent = 'Aktif';
-        showNotification('Mode Waktu diaktifkan - Semua pot akan disiram sesuai jadwal', 'success');
-        
-        // Enable inputs
-        document.getElementById('schedule1Time').disabled = false;
-        document.getElementById('schedule1Duration').disabled = false;
-        document.getElementById('schedule2Time').disabled = false;
-        document.getElementById('schedule2Duration').disabled = false;
-    } else {
-        mainToggle.classList.remove('active');
-        statusIndicator.classList.remove('active');
-        statusText.textContent = 'Tidak Aktif';
-        showNotification('Mode Waktu dinonaktifkan', 'warning');
-        
-        // Disable inputs
-        document.getElementById('schedule1Time').disabled = true;
-        document.getElementById('schedule1Duration').disabled = true;
-        document.getElementById('schedule2Time').disabled = true;
-        document.getElementById('schedule2Duration').disabled = true;
-    }
-    
-    // Save to Firebase
-    update(kontrolRef, {
-        waktu: isMainModeActive
-    }).catch((error) => {
-        console.error('Error updating Firebase:', error);
-        showNotification('Gagal menyimpan ke server', 'error');
-    });
-};
-
 // Initialize mode
 function initializeMode() {
-    // Load from Firebase
-    onValue(kontrolRef, (snapshot) => {
-        if (snapshot.exists()) {
-            const data = snapshot.val();
-            console.log('Controller data loaded:', data);
-            
-            // Update mode status
-            if (data.waktu !== undefined) {
-                isMainModeActive = data.waktu;
-                const mainToggle = document.getElementById('mainToggle');
-                const statusIndicator = document.getElementById('statusIndicator');
-                const statusText = document.getElementById('statusText');
-                
-                if (isMainModeActive) {
-                    mainToggle.classList.add('active');
-                    statusIndicator.classList.add('active');
-                    statusText.textContent = 'Aktif';
-                    
-                    // Enable inputs
-                    document.getElementById('schedule1Time').disabled = false;
-                    document.getElementById('schedule1Duration').disabled = false;
-                    document.getElementById('schedule2Time').disabled = false;
-                    document.getElementById('schedule2Duration').disabled = false;
-                } else {
-                    mainToggle.classList.remove('active');
-                    statusIndicator.classList.remove('active');
-                    statusText.textContent = 'Tidak Aktif';
-                    
-                    // Disable inputs
-                    document.getElementById('schedule1Time').disabled = true;
-                    document.getElementById('schedule1Duration').disabled = true;
-                    document.getElementById('schedule2Time').disabled = true;
-                    document.getElementById('schedule2Duration').disabled = true;
-                }
+    const statusRef = ref(database, 'kontrol/waktu');
+    
+    onValue(statusRef, (snapshot) => {
+        const isActive = snapshot.val() === true || snapshot.val() === 1;
+        const mainToggle = document.getElementById('mainToggle');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        const btnAddSchedule = document.getElementById('btnAddSchedule');
+        
+        if (mainToggle) {
+            if (isActive) {
+                mainToggle.classList.add('active');
+            } else {
+                mainToggle.classList.remove('active');
             }
-            
-            // Update schedule values
-            if (data.waktu_1 !== undefined && data.waktu_1 !== '') {
-                document.getElementById('schedule1Time').value = data.waktu_1;
-                scheduleSettings.schedule1.time = data.waktu_1;
-            }
-            
-            if (data.durasi_1 !== undefined) {
-                document.getElementById('schedule1Duration').value = data.durasi_1;
-                scheduleSettings.schedule1.duration = data.durasi_1;
-            }
-            
-            if (data.waktu_2 !== undefined && data.waktu_2 !== '') {
-                document.getElementById('schedule2Time').value = data.waktu_2;
-                scheduleSettings.schedule2.time = data.waktu_2;
-            }
-            
-            if (data.durasi_2 !== undefined) {
-                document.getElementById('schedule2Duration').value = data.durasi_2;
-                scheduleSettings.schedule2.duration = data.durasi_2;
+        }
+        
+        if (statusIndicator) {
+            if (isActive) {
+                statusIndicator.classList.add('active');
+                statusText.textContent = 'Aktif';
+                if (btnAddSchedule) btnAddSchedule.disabled = false;
+            } else {
+                statusIndicator.classList.remove('active');
+                statusText.textContent = 'Tidak Aktif';
+                if (btnAddSchedule) btnAddSchedule.disabled = true;
             }
         }
     });
     
-    // Setup input listeners
-    setupInputListeners();
+    // Load schedules from Firebase
+    loadSchedulesFromFirebase();
+    
+    // Setup add schedule button
+    setupAddScheduleButton();
+    
+    isPageLoaded = true;
 }
 
-// Setup input listeners
-function setupInputListeners() {
-    // Schedule 1 time
-    document.getElementById('schedule1Time').addEventListener('change', function() {
-        scheduleSettings.schedule1.time = this.value;
-        update(kontrolRef, {
-            waktu_1: this.value
-        }).then(() => {
-            showNotification('Waktu penyiraman 1 diperbarui', 'success');
-        }).catch((error) => {
-            console.error('Error updating Firebase:', error);
-            showNotification('Gagal menyimpan ke server', 'error');
-        });
-    });
+// Load schedules from Firebase
+function loadSchedulesFromFirebase() {
+    const schedulesRef = ref(database, 'kontrol/jadwal_waktu');
     
-    // Schedule 1 duration
-    document.getElementById('schedule1Duration').addEventListener('change', function() {
-        const duration = parseInt(this.value);
-        scheduleSettings.schedule1.duration = duration;
-        update(kontrolRef, {
-            durasi_1: duration
-        }).then(() => {
-            showNotification('Durasi penyiraman 1 diperbarui', 'success');
-        }).catch((error) => {
-            console.error('Error updating Firebase:', error);
-            showNotification('Gagal menyimpan ke server', 'error');
-        });
-    });
-    
-    // Schedule 2 time
-    document.getElementById('schedule2Time').addEventListener('change', function() {
-        scheduleSettings.schedule2.time = this.value;
-        update(kontrolRef, {
-            waktu_2: this.value
-        }).then(() => {
-            showNotification('Waktu penyiraman 2 diperbarui', 'success');
-        }).catch((error) => {
-            console.error('Error updating Firebase:', error);
-            showNotification('Gagal menyimpan ke server', 'error');
-        });
-    });
-    
-    // Schedule 2 duration
-    document.getElementById('schedule2Duration').addEventListener('change', function() {
-        const duration = parseInt(this.value);
-        scheduleSettings.schedule2.duration = duration;
-        update(kontrolRef, {
-            durasi_2: duration
-        }).then(() => {
-            showNotification('Durasi penyiraman 2 diperbarui', 'success');
-        }).catch((error) => {
-            console.error('Error updating Firebase:', error);
-            showNotification('Gagal menyimpan ke server', 'error');
-        });
+    onValue(schedulesRef, (snapshot) => {
+        schedules = [];
+        const data = snapshot.val();
+        
+        if (data) {
+            Object.keys(data).forEach(key => {
+                schedules.push({
+                    id: key,
+                    ...data[key]
+                });
+            });
+        }
+        
+        renderSchedules();
     });
 }
+
+// Render schedules to the UI
+function renderSchedules() {
+    const container = document.getElementById('scheduleContainer');
+    if (!container) return;
+    
+    if (schedules.length === 0) {
+        container.innerHTML = `
+            <div class="empty-schedule">
+                <i class="fas fa-calendar-times"></i>
+                <p>Belum ada jadwal penyiraman</p>
+                <p class="empty-subtitle">Klik tombol "Tambah Jadwal" untuk membuat jadwal baru</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = schedules.map(schedule => {
+        const pots = schedule.pots || [];
+        const potList = pots.map(p => p.replace('pot', 'Pot ')).join(', ');
+        const pumpIcon = getPumpIcon(schedule.pumpType);
+        const pumpLabel = getPumpLabel(schedule.pumpType);
+        
+        return `
+            <div class="schedule-item">
+                <div class="schedule-item-header">
+                    <div class="schedule-name">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>${schedule.name || 'Jadwal Penyiraman'}</span>
+                    </div>
+                    <div class="schedule-actions">
+                        <button class="btn-action btn-edit" onclick="editSchedule('${schedule.id}')" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-action btn-duplicate" onclick="duplicateSchedule('${schedule.id}')" title="Duplikat">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                        <button class="btn-action btn-delete" onclick="deleteSchedule('${schedule.id}')" title="Hapus">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="schedule-item-body">
+                    <div class="schedule-info">
+                        <div class="info-item">
+                            <i class="fas fa-clock"></i>
+                            <span>Waktu: ${schedule.time || '-'}</span>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-hourglass-half"></i>
+                            <span>Durasi: ${schedule.duration || 0} detik</span>
+                        </div>
+                    </div>
+                    <div class="schedule-info">
+                        <div class="info-item">
+                            <i class="fas fa-seedling"></i>
+                            <span>Pot: ${potList || 'Tidak ada'}</span>
+                        </div>
+                        <div class="info-item">
+                            <i class="${pumpIcon}"></i>
+                            <span>${pumpLabel}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Get pump icon based on type
+function getPumpIcon(type) {
+    switch(type) {
+        case 'air': return 'fas fa-water';
+        case 'nutrisi': return 'fas fa-flask';
+        case 'pengaduk': return 'fas fa-blender';
+        default: return 'fas fa-question';
+    }
+}
+
+// Get pump label based on type
+function getPumpLabel(type) {
+    switch(type) {
+        case 'air': return 'Pompa Air';
+        case 'nutrisi': return 'Pompa Nutrisi';
+        case 'pengaduk': return 'Pengaduk';
+        default: return 'Tidak diketahui';
+    }
+}
+
+// Setup add schedule button
+function setupAddScheduleButton() {
+    document.getElementById('btnAddSchedule')?.addEventListener('click', () => {
+        openScheduleModal();
+    });
+}
+
+// Toggle main mode
+window.toggleMainMode = function() {
+    if (!isPageLoaded) return;
+    
+    const mainToggle = document.getElementById('mainToggle');
+    const isActive = mainToggle.classList.contains('active');
+    const newStatus = !isActive;
+    const statusRef = ref(database, 'kontrol/waktu');
+    
+    update(ref(database, 'kontrol'), {
+        waktu: newStatus
+    }).then(() => {
+        showNotification(newStatus ? 'Mode Waktu diaktifkan' : 'Mode Waktu dinonaktifkan', newStatus ? 'success' : 'warning');
+    }).catch((error) => {
+        console.error('Error updating mode:', error);
+        showNotification('Gagal mengubah status mode', 'error');
+    });
+};
+
+// Open schedule modal for add/edit
+window.openScheduleModal = function(scheduleId = null) {
+    const modal = document.getElementById('scheduleModal');
+    const modalTitle = document.getElementById('modalTitle');
+    
+    if (scheduleId) {
+        // Edit mode
+        const schedule = schedules.find(s => s.id === scheduleId);
+        if (schedule) {
+            modalTitle.innerHTML = '<i class="fas fa-edit"></i> Edit Jadwal';
+            document.getElementById('editScheduleId').value = scheduleId;
+            document.getElementById('scheduleName').value = schedule.name || '';
+            document.getElementById('scheduleTime').value = schedule.time || '';
+            document.getElementById('scheduleDuration').value = schedule.duration || 30;
+            
+            // Set pot checkboxes
+            const checkboxes = document.querySelectorAll('.schedule-pot-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = schedule.pots && schedule.pots.includes(cb.value);
+            });
+            
+            // Set pump type
+            const pumpRadio = document.querySelector(`input[name="pumpType"][value="${schedule.pumpType}"]`);
+            if (pumpRadio) pumpRadio.checked = true;
+        }
+    } else {
+        // Add mode
+        modalTitle.innerHTML = '<i class="fas fa-calendar-plus"></i> Tambah Jadwal';
+        document.getElementById('editScheduleId').value = '';
+        document.getElementById('scheduleName').value = '';
+        document.getElementById('scheduleTime').value = '';
+        document.getElementById('scheduleDuration').value = 30;
+        
+        // Uncheck all pots
+        document.querySelectorAll('.schedule-pot-checkbox').forEach(cb => cb.checked = false);
+        
+        // Reset pump type to air
+        const airRadio = document.querySelector('input[name="pumpType"][value="air"]');
+        if (airRadio) airRadio.checked = true;
+    }
+    
+    modal.style.display = 'flex';
+};
+
+// Close schedule modal
+window.closeScheduleModal = function() {
+    document.getElementById('scheduleModal').style.display = 'none';
+};
+
+// Save schedule (add or edit)
+window.saveSchedule = function() {
+    const scheduleId = document.getElementById('editScheduleId').value;
+    const name = document.getElementById('scheduleName').value.trim();
+    const time = document.getElementById('scheduleTime').value;
+    const duration = parseInt(document.getElementById('scheduleDuration').value);
+    
+    // Get selected pots
+    const pots = Array.from(document.querySelectorAll('.schedule-pot-checkbox:checked'))
+        .map(cb => cb.value);
+    
+    // Get pump type
+    const pumpType = document.querySelector('input[name="pumpType"]:checked')?.value || 'air';
+    
+    // Validation
+    if (!name) {
+        alert('Nama jadwal harus diisi!');
+        return;
+    }
+    
+    if (!time) {
+        alert('Waktu mulai harus diisi!');
+        return;
+    }
+    
+    if (pots.length === 0) {
+        alert('Pilih minimal 1 pot!');
+        return;
+    }
+    
+    const scheduleData = {
+        name,
+        time,
+        duration,
+        pots,
+        pumpType
+    };
+    
+    if (scheduleId) {
+        // Update existing schedule
+        const scheduleRef = ref(database, `kontrol/jadwal_waktu/${scheduleId}`);
+        update(scheduleRef, scheduleData)
+            .then(() => {
+                closeScheduleModal();
+                showNotification('Jadwal berhasil diupdate!', 'success');
+            })
+            .catch(error => {
+                console.error('Error updating schedule:', error);
+                alert('Gagal mengupdate jadwal!');
+            });
+    } else {
+        // Add new schedule
+        const schedulesRef = ref(database, 'kontrol/jadwal_waktu');
+        push(schedulesRef, scheduleData)
+            .then(() => {
+                closeScheduleModal();
+                showNotification('Jadwal berhasil ditambahkan!', 'success');
+            })
+            .catch(error => {
+                console.error('Error adding schedule:', error);
+                alert('Gagal menambahkan jadwal!');
+            });
+    }
+};
+
+// Edit schedule
+window.editSchedule = function(scheduleId) {
+    openScheduleModal(scheduleId);
+};
+
+// Duplicate schedule
+window.duplicateSchedule = function(scheduleId) {
+    const schedule = schedules.find(s => s.id === scheduleId);
+    if (!schedule) return;
+    
+    const newSchedule = {
+        name: `${schedule.name} (Copy)`,
+        time: schedule.time,
+        duration: schedule.duration,
+        pots: schedule.pots,
+        pumpType: schedule.pumpType
+    };
+    
+    const schedulesRef = ref(database, 'kontrol/jadwal_waktu');
+    push(schedulesRef, newSchedule)
+        .then(() => {
+            showNotification('Jadwal berhasil diduplikat!', 'success');
+        })
+        .catch(error => {
+            console.error('Error duplicating schedule:', error);
+            alert('Gagal menduplikat jadwal!');
+        });
+};
+
+// Delete schedule
+window.deleteSchedule = function(scheduleId) {
+    if (!confirm('Apakah Anda yakin ingin menghapus jadwal ini?')) return;
+    
+    const scheduleRef = ref(database, `kontrol/jadwal_waktu/${scheduleId}`);
+    remove(scheduleRef)
+        .then(() => {
+            showNotification('Jadwal berhasil dihapus!', 'success');
+        })
+        .catch(error => {
+            console.error('Error deleting schedule:', error);
+            alert('Gagal menghapus jadwal!');
+        });
+};
+
+// Select all pots in modal
+window.selectAllPotsModal = function() {
+    document.querySelectorAll('.schedule-pot-checkbox').forEach(cb => cb.checked = true);
+};
+
+// Deselect all pots in modal
+window.deselectAllPotsModal = function() {
+    document.querySelectorAll('.schedule-pot-checkbox').forEach(cb => cb.checked = false);
+};
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('scheduleModal');
+    if (event.target === modal) {
+        closeScheduleModal();
+    }
+};

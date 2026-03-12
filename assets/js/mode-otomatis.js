@@ -23,24 +23,50 @@ const kontrolRef = ref(database, 'kontrol');
 
 // Notification function
 function showNotification(message, type = 'success') {
+    console.log('showNotification called:', message, type); // Debug log
+    
     const notification = document.getElementById('notification');
-    const icon = notification.querySelector('.notification-icon');
-    const messageEl = notification.querySelector('.notification-message');
-
-    // Set icon based on type
-    if (type === 'success') {
-        icon.className = 'notification-icon fas fa-check-circle';
-    } else if (type === 'error') {
-        icon.className = 'notification-icon fas fa-exclamation-circle';
-    } else if (type === 'info') {
-        icon.className = 'notification-icon fas fa-info-circle';
+    if (!notification) {
+        console.error('Notification element not found');
+        return;
     }
-
-    messageEl.textContent = message;
+    
+    console.log('Notification element found, showing...'); // Debug log
+    
+    // Set notification type and message
     notification.className = `notification ${type}`;
+    
+    // Update icon
+    const icon = notification.querySelector('.notification-icon');
+    if (icon) {
+        if (type === 'success') {
+            icon.className = 'notification-icon fas fa-check-circle';
+        } else if (type === 'error') {
+            icon.className = 'notification-icon fas fa-exclamation-circle';
+        } else if (type === 'info') {
+            icon.className = 'notification-icon fas fa-info-circle';
+        } else if (type === 'warning') {
+            icon.className = 'notification-icon fas fa-exclamation-triangle';
+        }
+    }
+    
+    // Update message
+    const messageEl = notification.querySelector('.notification-message');
+    if (messageEl) {
+        messageEl.textContent = message;
+    }
+    
+    // Show notification
+    notification.classList.add('show');
+    notification.classList.remove('hidden');
+    
+    console.log('Notification shown with classes:', notification.className); // Debug log
 
+    // Hide after 3 seconds
     setTimeout(() => {
+        notification.classList.remove('show');
         notification.classList.add('hidden');
+        console.log('Notification hidden'); // Debug log
     }, 3000);
 }
 
@@ -87,12 +113,31 @@ window.toggleMainMode = function() {
     const globalMinSlider = document.getElementById('globalMin');
     const globalMaxSlider = document.getElementById('globalMax');
     
+    // Get all pot checkboxes and action buttons
+    const potCheckboxes = document.querySelectorAll('.pot-checkbox');
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    const deselectAllBtn = document.getElementById('deselectAllBtn');
+    
+    // Get pump toggles
+    const pompaAir = document.getElementById('pompaAir');
+    const pompaNutrisi = document.getElementById('pompaNutrisi');
+    
     if (mainModeActive) {
         mainToggle.classList.add('active');
         statusIndicator.classList.add('active');
         statusText.textContent = 'Aktif';
         globalMinSlider.disabled = false;
         globalMaxSlider.disabled = false;
+        
+        // Enable pot selection
+        potCheckboxes.forEach(checkbox => checkbox.disabled = false);
+        selectAllBtn.disabled = false;
+        deselectAllBtn.disabled = false;
+        
+        // Enable pump selection
+        pompaAir.disabled = false;
+        pompaNutrisi.disabled = false;
+        
         showNotification('Mode Otomatis diaktifkan', 'success');
     } else {
         mainToggle.classList.remove('active');
@@ -100,6 +145,16 @@ window.toggleMainMode = function() {
         statusText.textContent = 'Tidak Aktif';
         globalMinSlider.disabled = true;
         globalMaxSlider.disabled = true;
+        
+        // Disable pot selection
+        potCheckboxes.forEach(checkbox => checkbox.disabled = true);
+        selectAllBtn.disabled = true;
+        deselectAllBtn.disabled = true;
+        
+        // Disable pump selection
+        pompaAir.disabled = true;
+        pompaNutrisi.disabled = true;
+        
         showNotification('Mode Otomatis dinonaktifkan', 'info');
     }
     
@@ -125,6 +180,15 @@ function loadControllerData() {
             const data = snapshot.val();
             console.log('Controller data loaded:', data);
             
+            // Get all pot checkboxes and action buttons
+            const potCheckboxes = document.querySelectorAll('.pot-checkbox');
+            const selectAllBtn = document.getElementById('selectAllBtn');
+            const deselectAllBtn = document.getElementById('deselectAllBtn');
+            
+            // Get pump toggles
+            const pompaAir = document.getElementById('pompaAir');
+            const pompaNutrisi = document.getElementById('pompaNutrisi');
+            
             // Update mode status
             if (data.otomatis !== undefined) {
                 mainModeActive = data.otomatis;
@@ -140,12 +204,65 @@ function loadControllerData() {
                     statusText.textContent = 'Aktif';
                     globalMinSlider.disabled = false;
                     globalMaxSlider.disabled = false;
+                    
+                    // Enable pot selection
+                    potCheckboxes.forEach(checkbox => checkbox.disabled = false);
+                    selectAllBtn.disabled = false;
+                    deselectAllBtn.disabled = false;
+                    
+                    // Enable pump selection
+                    pompaAir.disabled = false;
+                    pompaNutrisi.disabled = false;
                 } else {
                     mainToggle.classList.remove('active');
                     statusIndicator.classList.remove('active');
                     statusText.textContent = 'Tidak Aktif';
                     globalMinSlider.disabled = true;
                     globalMaxSlider.disabled = true;
+                    
+                    // Disable pot selection
+                    potCheckboxes.forEach(checkbox => checkbox.disabled = true);
+                    selectAllBtn.disabled = true;
+                    deselectAllBtn.disabled = true;
+                    
+                    // Disable pump selection
+                    pompaAir.disabled = true;
+                    pompaNutrisi.disabled = true;
+                }
+            }
+            
+            // Load selected pots
+            if (data.pot_otomatis !== undefined) {
+                for (let i = 1; i <= 5; i++) {
+                    const checkbox = document.getElementById(`pot${i}`);
+                    if (checkbox && data.pot_otomatis[`pot${i}`] !== undefined) {
+                        checkbox.checked = data.pot_otomatis[`pot${i}`];
+                    }
+                }
+            }
+            
+            // Load pump states
+            if (data.pompa_otomatis !== undefined) {
+                const pompaAirOption = pompaAir.closest('.pump-option');
+                const pompaNutrisiOption = pompaNutrisi.closest('.pump-option');
+                
+                // Reset classes first
+                pompaAirOption.classList.remove('active', 'inactive');
+                pompaNutrisiOption.classList.remove('active', 'inactive');
+                
+                if (data.pompa_otomatis.pompa_air !== undefined) {
+                    pompaAir.checked = data.pompa_otomatis.pompa_air;
+                    if (data.pompa_otomatis.pompa_air) {
+                        pompaAirOption.classList.add('active');
+                        pompaNutrisiOption.classList.add('inactive');
+                    }
+                }
+                if (data.pompa_otomatis.pompa_nutrisi !== undefined) {
+                    pompaNutrisi.checked = data.pompa_otomatis.pompa_nutrisi;
+                    if (data.pompa_otomatis.pompa_nutrisi) {
+                        pompaNutrisiOption.classList.add('active');
+                        pompaAirOption.classList.add('inactive');
+                    }
                 }
             }
             
@@ -245,6 +362,155 @@ window.addEventListener('DOMContentLoaded', () => {
         }).catch((error) => {
             console.error('Error updating Firebase:', error);
             showNotification('Gagal menyimpan ke server', 'error');
+        });
+    });
+    
+    // Pot checkbox event listeners
+    const potCheckboxes = document.querySelectorAll('.pot-checkbox');
+    potCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const potId = this.id;
+            const isChecked = this.checked;
+            
+            // Save to Firebase
+            const potOtomatisPath = `pot_otomatis/${potId}`;
+            update(ref(database, 'kontrol'), {
+                [`pot_otomatis/${potId}`]: isChecked
+            }).then(() => {
+                const potNumber = potId.replace('pot', '');
+                if (isChecked) {
+                    showNotification(`Pot ${potNumber} dipilih untuk penyiraman otomatis`, 'success');
+                } else {
+                    showNotification(`Pot ${potNumber} tidak dipilih untuk penyiraman otomatis`, 'info');
+                }
+            }).catch((error) => {
+                console.error('Error updating Firebase:', error);
+                showNotification('Gagal menyimpan ke server', 'error');
+                // Revert checkbox state on error
+                this.checked = !isChecked;
+            });
+        });
+    });
+    
+    // Select All button
+    document.getElementById('selectAllBtn').addEventListener('click', function() {
+        const potCheckboxes = document.querySelectorAll('.pot-checkbox');
+        const updates = {};
+        
+        potCheckboxes.forEach(checkbox => {
+            if (!checkbox.disabled) {
+                checkbox.checked = true;
+                updates[`pot_otomatis/${checkbox.id}`] = true;
+            }
+        });
+        
+        // Save all to Firebase
+        update(ref(database, 'kontrol'), updates).then(() => {
+            showNotification('Semua pot dipilih untuk penyiraman otomatis', 'success');
+        }).catch((error) => {
+            console.error('Error updating Firebase:', error);
+            showNotification('Gagal menyimpan ke server', 'error');
+        });
+    });
+    
+    // Deselect All button
+    document.getElementById('deselectAllBtn').addEventListener('click', function() {
+        const potCheckboxes = document.querySelectorAll('.pot-checkbox');
+        const updates = {};
+        
+        potCheckboxes.forEach(checkbox => {
+            if (!checkbox.disabled) {
+                checkbox.checked = false;
+                updates[`pot_otomatis/${checkbox.id}`] = false;
+            }
+        });
+        
+        // Save all to Firebase
+        update(ref(database, 'kontrol'), updates).then(() => {
+            showNotification('Semua pot tidak dipilih untuk penyiraman otomatis', 'info');
+        }).catch((error) => {
+            console.error('Error updating Firebase:', error);
+            showNotification('Gagal menyimpan ke server', 'error');
+        });
+    });
+    
+    // Pompa Air toggle event listener
+    document.getElementById('pompaAir').addEventListener('change', function() {
+        const isChecked = this.checked;
+        const pompaNutrisi = document.getElementById('pompaNutrisi');
+        const pompaAirOption = this.closest('.pump-option');
+        const pompaNutrisiOption = pompaNutrisi.closest('.pump-option');
+        
+        // If pompa air is checked, uncheck pompa nutrisi
+        if (isChecked) {
+            pompaNutrisi.checked = false;
+            pompaAirOption.classList.add('active');
+            pompaAirOption.classList.remove('inactive');
+            pompaNutrisiOption.classList.remove('active');
+            pompaNutrisiOption.classList.add('inactive');
+        } else {
+            pompaAirOption.classList.remove('active');
+            pompaAirOption.classList.remove('inactive');
+            pompaNutrisiOption.classList.remove('inactive');
+        }
+        
+        // Save to Firebase
+        const updates = {
+            'pompa_otomatis/pompa_air': isChecked,
+            'pompa_otomatis/pompa_nutrisi': false
+        };
+        
+        update(ref(database, 'kontrol'), updates).then(() => {
+            if (isChecked) {
+                showNotification('Pompa Air diaktifkan untuk mode otomatis', 'success');
+            } else {
+                showNotification('Pompa Air dinonaktifkan untuk mode otomatis', 'info');
+            }
+        }).catch((error) => {
+            console.error('Error updating Firebase:', error);
+            showNotification('Gagal menyimpan ke server', 'error');
+            // Revert toggle state on error
+            this.checked = !isChecked;
+        });
+    });
+    
+    // Pompa Nutrisi toggle event listener
+    document.getElementById('pompaNutrisi').addEventListener('change', function() {
+        const isChecked = this.checked;
+        const pompaAir = document.getElementById('pompaAir');
+        const pompaNutrisiOption = this.closest('.pump-option');
+        const pompaAirOption = pompaAir.closest('.pump-option');
+        
+        // If pompa nutrisi is checked, uncheck pompa air
+        if (isChecked) {
+            pompaAir.checked = false;
+            pompaNutrisiOption.classList.add('active');
+            pompaNutrisiOption.classList.remove('inactive');
+            pompaAirOption.classList.remove('active');
+            pompaAirOption.classList.add('inactive');
+        } else {
+            pompaNutrisiOption.classList.remove('active');
+            pompaNutrisiOption.classList.remove('inactive');
+            pompaAirOption.classList.remove('inactive');
+        }
+        
+        // Save to Firebase
+        const updates = {
+            'pompa_otomatis/pompa_air': false,
+            'pompa_otomatis/pompa_nutrisi': isChecked
+        };
+        
+        update(ref(database, 'kontrol'), updates).then(() => {
+            if (isChecked) {
+                showNotification('Pompa Larutan Nutrisi diaktifkan untuk mode otomatis', 'success');
+            } else {
+                showNotification('Pompa Larutan Nutrisi dinonaktifkan untuk mode otomatis', 'info');
+            }
+        }).catch((error) => {
+            console.error('Error updating Firebase:', error);
+            showNotification('Gagal menyimpan ke server', 'error');
+            // Revert toggle state on error
+            this.checked = !isChecked;
         });
     });
 });

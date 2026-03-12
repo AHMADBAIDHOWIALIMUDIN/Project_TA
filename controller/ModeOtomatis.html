@@ -6,41 +6,89 @@
     <title>Mode Otomatis - Smart Pot</title>
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="../assets/js/theme-toggle.js"></script>
+    <script src="../assets/js/sidebar.js"></script>
     <script type="module" src="../assets/js/mode-otomatis.js" defer></script>
 </head>
-<body>
+<body class="light-mode">
+    <!-- Sidebar Overlay for Mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
     <!-- Dashboard Page -->
     <div id="dashboardPage" class="dashboard-page">
-        <!-- Navbar -->
-        <nav class="navbar">
-            <div class="nav-brand">
-                <img src="../assets/img/logo.png" alt="Logo" class="nav-logo">
-                <span class="brand-name">Smart_Pot</span>
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <!-- Sidebar Toggle Button -->
+            <button class="sidebar-toggle" onclick="toggleSidebarCollapse()">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+
+            <!-- Sidebar Brand -->
+            <div class="sidebar-brand">
+                <img src="../assets/img/logo.png" alt="Smart Pot Logo" class="sidebar-logo">
+                <div class="sidebar-title">SMART POT</div>
+                <div class="sidebar-subtitle">IoT Monitoring dan Controller</div>
             </div>
-            <div class="nav-menu">
-                <a href="../dashboard/" class="nav-item">
-                    <i class="fas fa-home"></i> Dashboard
+
+            <!-- Sidebar Menu -->
+            <nav class="sidebar-menu">
+                <a href="../dashboard/" class="menu-item">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
                 </a>
-                <a href="../controller/" class="nav-item active">
-                    <i class="fas fa-sliders-h"></i> Controller
+                <a href="../controller/" class="menu-item active">
+                    <i class="fas fa-sliders-h"></i>
+                    <span>Controller</span>
                 </a>
-                <a href="../histori/" class="nav-item">
-                    <i class="fas fa-history"></i> Histori
+                <a href="../histori/" class="menu-item">
+                    <i class="fas fa-history"></i>
+                    <span>Histori</span>
                 </a>
-                <a href="../kelola-user/" class="nav-item">
-                    <i class="fas fa-users"></i> Kelola User
+                <a href="../kelola-user/" class="menu-item">
+                    <i class="fas fa-users"></i>
+                    <span>Kelola User</span>
                 </a>
-            </div>
-            <div class="nav-user">
-                <span id="userEmail"></span>
+            </nav>
+
+            <!-- Sidebar Footer -->
+            <div class="sidebar-footer">
+                <div class="sidebar-user">
+                    <div class="user-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name">User</div>
+                        <div class="user-email" id="userEmail">user@smartpot.com</div>
+                    </div>
+                </div>
                 <button id="signOutBtn" class="btn-logout">
-                    <i class="fas fa-sign-out-alt"></i> Logout
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
                 </button>
             </div>
-        </nav>
+        </aside>
 
-        <!-- Main Content -->
-        <div class="main-content">
+        <!-- Main Wrapper -->
+        <div class="main-wrapper">
+            <!-- Top Header -->
+            <header class="top-header">
+                <div class="header-title">
+                    <button class="mobile-menu-btn" onclick="toggleSidebar()" style="display: none;">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <i class="fas fa-robot"></i>
+                    <h1>Mode Otomatis</h1>
+                </div>
+                <div class="header-actions">
+                    <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Dark Mode">
+                        <i id="themeIcon" class="fas fa-sun"></i>
+                    </button>
+                    <div class="header-time" id="currentTime"></div>
+                </div>
+            </header>
+
+            <!-- Main Content -->
+            <div class="main-content">
             <!-- Back Button -->
             <div class="back-nav">
                 <a href="../controller/" class="back-btn">
@@ -95,7 +143,129 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Pot Selection Card -->
+                <div class="pot-selection-card">
+                    <div class="pot-selection-header">
+                        <div class="header-left">
+                            <i class="fas fa-seedling"></i>
+                            <h3>Pilih Pot yang Akan Disiram Otomatis</h3>
+                        </div>
+                        <div class="selection-actions">
+                            <button class="action-btn select-all-btn" id="selectAllBtn" disabled>
+                                <i class="fas fa-check-double"></i> Pilih Semua
+                            </button>
+                            <button class="action-btn deselect-all-btn" id="deselectAllBtn" disabled>
+                                <i class="fas fa-times-circle"></i> Hapus Semua
+                            </button>
+                        </div>
+                    </div>
+                    <div class="pot-selection-grid">
+                        <div class="pot-checkbox-item">
+                            <input type="checkbox" id="pot1" class="pot-checkbox" disabled>
+                            <label for="pot1" class="pot-label">
+                                <div class="pot-icon">
+                                    <i class="fas fa-leaf"></i>
+                                </div>
+                                <span class="pot-name">Pot 1</span>
+                                <div class="check-indicator">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="pot-checkbox-item">
+                            <input type="checkbox" id="pot2" class="pot-checkbox" disabled>
+                            <label for="pot2" class="pot-label">
+                                <div class="pot-icon">
+                                    <i class="fas fa-leaf"></i>
+                                </div>
+                                <span class="pot-name">Pot 2</span>
+                                <div class="check-indicator">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="pot-checkbox-item">
+                            <input type="checkbox" id="pot3" class="pot-checkbox" disabled>
+                            <label for="pot3" class="pot-label">
+                                <div class="pot-icon">
+                                    <i class="fas fa-leaf"></i>
+                                </div>
+                                <span class="pot-name">Pot 3</span>
+                                <div class="check-indicator">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="pot-checkbox-item">
+                            <input type="checkbox" id="pot4" class="pot-checkbox" disabled>
+                            <label for="pot4" class="pot-label">
+                                <div class="pot-icon">
+                                    <i class="fas fa-leaf"></i>
+                                </div>
+                                <span class="pot-name">Pot 4</span>
+                                <div class="check-indicator">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="pot-checkbox-item">
+                            <input type="checkbox" id="pot5" class="pot-checkbox" disabled>
+                            <label for="pot5" class="pot-label">
+                                <div class="pot-icon">
+                                    <i class="fas fa-leaf"></i>
+                                </div>
+                                <span class="pot-name">Pot 5</span>
+                                <div class="check-indicator">
+                                    <i class="fas fa-check"></i>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pump Selection Card -->
+                <div class="pump-selection-card">
+                    <div class="pump-header">
+                        <i class="fas fa-faucet"></i>
+                        <h3>Pilih Jenis Pompa</h3>
+                    </div>
+                    <p class="pump-description">Pilih salah satu jenis pompa untuk penyiraman otomatis</p>
+                    <div class="pump-options">
+                        <div class="pump-option">
+                            <div class="pump-info">
+                                <i class="fas fa-water"></i>
+                                <div class="pump-text">
+                                    <h4>Pompa Air</h4>
+                                    <p>Aktifkan pompa air saat penyiraman</p>
+                                </div>
+                            </div>
+                            <div class="pump-toggle-container">
+                                <input type="checkbox" id="pompaAir" class="pump-toggle-input" disabled>
+                                <label for="pompaAir" class="pump-toggle-label">
+                                    <span class="pump-toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="pump-option">
+                            <div class="pump-info">
+                                <i class="fas fa-flask"></i>
+                                <div class="pump-text">
+                                    <h4>Pompa Larutan Nutrisi</h4>
+                                    <p>Aktifkan pompa larutan nutrisi saat penyiraman</p>
+                                </div>
+                            </div>
+                            <div class="pump-toggle-container">
+                                <input type="checkbox" id="pompaNutrisi" class="pump-toggle-input" disabled>
+                                <label for="pompaNutrisi" class="pump-toggle-label">
+                                    <span class="pump-toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
+        </div>
         </div>
     </div>
 
