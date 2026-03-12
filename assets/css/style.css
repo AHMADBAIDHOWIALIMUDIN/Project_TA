@@ -76,18 +76,39 @@ body {
     box-sizing: border-box;
 }
 
+html {
+    overflow-x: hidden;
+    width: 100%;
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+}
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     overflow-x: hidden;
+    width: 100%;
     min-height: 100vh;
     position: relative;
     background-color: var(--bg-primary);
     color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 /* Allow scrolling on all pages for responsiveness */
 body {
     overflow-y: auto;
+}
+
+/* Remove tap highlight on mobile */
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Improve touch scrolling */
+.sidebar-menu,
+.main-content {
+    -webkit-overflow-scrolling: touch;
 }
 
 /* ===== ANIMATED GRADIENT BACKGROUND ===== */
@@ -458,6 +479,8 @@ body {
     min-height: 100vh;
     display: flex;
     transition: all 0.3s ease;
+    overflow-x: hidden;
+    width: 100%;
 }
 
 /* ===== SIDEBAR ===== */
@@ -472,7 +495,8 @@ body {
     display: flex;
     flex-direction: column;
     z-index: 1000;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform;
 }
 
 .sidebar.collapsed {
@@ -583,6 +607,11 @@ body {
     position: relative;
     margin: 4px 12px;
     border-radius: 10px;
+    min-height: 48px;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .menu-item i {
@@ -604,6 +633,11 @@ body {
     background: rgba(255, 255, 255, 0.1);
     color: white;
     transform: translateX(5px);
+}
+
+.menu-item:active {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateX(3px);
 }
 
 .menu-item.active {
@@ -693,6 +727,11 @@ body {
     gap: 8px;
     font-size: 14px;
     font-weight: 600;
+    min-height: 44px;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .sidebar.collapsed .btn-logout span {
@@ -703,6 +742,11 @@ body {
     background: #dc2626;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+}
+
+.btn-logout:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(220, 38, 38, 0.4);
 }
 
 /* Sidebar Toggle Button */
@@ -738,6 +782,9 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
 .sidebar.collapsed + .main-wrapper {
@@ -880,7 +927,7 @@ body {
 /* ===== DASHBOARD SENSOR CARDS ===== */
 .sensor-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 24px;
     margin-bottom: 32px;
 }
@@ -896,6 +943,7 @@ body {
     box-shadow: var(--shadow-md);
     overflow: hidden;
     transition: all 0.3s ease;
+    cursor: default;
 }
 
 .sensor-temp {
@@ -951,7 +999,7 @@ body {
 /* ===== SMART POTS ===== */
 .pots-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     gap: 20px;
 }
 
@@ -961,11 +1009,19 @@ body {
     box-shadow: var(--shadow-md);
     transition: all 0.3s ease;
     cursor: pointer;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .pot:hover {
     transform: translateY(-4px);
     box-shadow: var(--shadow-lg);
+}
+
+.pot:active {
+    transform: translateY(-2px);
 }
 
 .pot-header {
@@ -1731,28 +1787,41 @@ input:checked + .slider:before {
     /* Sidebar responsive */
     .sidebar {
         transform: translateX(-100%);
+        position: fixed;
+        z-index: 1001;
+        width: 280px;
     }
     
     .sidebar.mobile-open {
         transform: translateX(0);
     }
     
+    .sidebar.collapsed {
+        width: 280px;
+    }
+    
+    .sidebar-toggle {
+        display: none !important;
+    }
+    
     .main-wrapper {
         margin-left: 0 !important;
+        width: 100%;
     }
     
     .mobile-menu-btn {
-        display: flex;
+        display: flex !important;
         align-items: center;
         justify-content: center;
         width: 40px;
         height: 40px;
-        background: #059669;
+        background: var(--accent-primary);
         color: white;
         border: none;
         border-radius: 8px;
         cursor: pointer;
         font-size: 20px;
+        flex-shrink: 0;
     }
     
     .sidebar-overlay {
@@ -1762,8 +1831,9 @@ input:checked + .slider:before {
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 999;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 1000;
+        backdrop-filter: blur(2px);
     }
     
     .sidebar-overlay.active {
@@ -1771,25 +1841,54 @@ input:checked + .slider:before {
     }
     
     .top-header {
-        padding: 15px 20px;
+        padding: 12px 15px;
+        position: sticky;
+        top: 0;
+        background: var(--bg-header);
+        z-index: 100;
+    }
+    
+    .header-title {
+        flex: 1;
+        min-width: 0;
     }
     
     .header-title h1 {
-        font-size: 22px;
+        font-size: 18px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .header-title i {
+        font-size: 20px;
+    }
+    
+    .header-actions {
+        gap: 10px;
+        flex-shrink: 0;
+    }
+    
+    .theme-toggle-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
     }
     
     .header-time {
-        font-size: 12px;
-        padding: 10px 16px;
-        gap: 6px;
+        font-size: 11px;
+        padding: 8px 12px;
+        gap: 4px;
+        white-space: nowrap;
     }
     
     .header-time::before {
-        font-size: 14px;
+        font-size: 12px;
     }
     
     .main-content {
-        padding: 20px;
+        padding: 15px;
+        padding-bottom: 60px;
     }
     
     .navbar {
@@ -1824,23 +1923,55 @@ input:checked + .slider:before {
         font-size: 13px;
     }
 
-    .main-content {
-        padding: 20px 15px;
-        padding-bottom: 60px;
-    }
-
     .sensor-cards {
         grid-template-columns: 1fr;
-        gap: 16px;
+        gap: 15px;
+    }
+    
+    .sensor-card {
+        padding: 24px 20px;
+        min-height: 120px;
+    }
+    
+    .sensor-value .value {
+        font-size: 48px;
+    }
+    
+    .sensor-value .unit {
+        font-size: 28px;
+    }
+    
+    .sensor-icon {
+        font-size: 60px;
+        right: 20px;
+        opacity: 0.2;
     }
 
     .pots-container {
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 16px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    
+    .pot {
+        min-width: 0;
+    }
+    
+    .pot-value {
+        font-size: 42px;
+    }
+    
+    .pot-moisture-label {
+        font-size: 11px;
+        letter-spacing: 1px;
     }
 
     .stats-container {
         grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .stat-card {
+        padding: 20px;
     }
 
     .form-grid {
@@ -1851,35 +1982,64 @@ input:checked + .slider:before {
         right: 10px;
         left: 10px;
         min-width: auto;
-        top: 80px;
+        top: 70px;
         font-size: 14px;
+        padding: 12px 15px;
     }
     
     .page-header {
-        margin-bottom: 25px;
+        margin-bottom: 20px;
     }
     
     .page-header h1 {
-        font-size: 26px;
+        font-size: 24px;
+    }
+    
+    .page-header p {
+        font-size: 14px;
     }
     
     .actuator-controls {
         grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .actuator-card {
+        padding: 20px;
+    }
+    
+    .card-body {
+        padding: 20px;
+    }
+}
+
+/* Tablet and Large Phone optimization */
+@media (max-width: 640px) and (min-width: 481px) {
+    .pots-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .sensor-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .header-title h1 {
+        font-size: 20px;
     }
 }
 
 @media (max-width: 480px) {
     .navbar {
-        padding: 10px 15px;
+        padding: 10px 12px;
     }
     
     .nav-brand {
-        font-size: 18px;
+        font-size: 16px;
     }
     
     .nav-logo {
-        width: 35px;
-        height: 35px;
+        width: 32px;
+        height: 32px;
     }
     
     .btn-logout {
@@ -1887,19 +2047,43 @@ input:checked + .slider:before {
         font-size: 12px;
     }
     
+    .top-header {
+        padding: 10px 12px;
+    }
+    
+    .header-title h1 {
+        font-size: 16px;
+    }
+    
+    .header-title i {
+        font-size: 18px;
+        display: none;
+    }
+    
+    .mobile-menu-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
+    }
+    
+    .theme-toggle-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+    }
+    
     .header-time {
-        font-size: 11px;
-        padding: 8px 12px;
+        font-size: 10px;
+        padding: 6px 10px;
         gap: 4px;
-        white-space: nowrap;
     }
     
     .header-time::before {
-        font-size: 12px;
+        font-size: 11px;
     }
     
     .main-content {
-        padding: 15px 10px;
+        padding: 12px;
         padding-bottom: 50px;
     }
     
@@ -1908,7 +2092,29 @@ input:checked + .slider:before {
     }
     
     .sensor-card {
-        padding: 20px;
+        padding: 20px 16px;
+        min-height: 110px;
+    }
+    
+    .sensor-value .value {
+        font-size: 40px;
+    }
+    
+    .sensor-value .unit {
+        font-size: 24px;
+    }
+    
+    .sensor-value .status {
+        font-size: 20px;
+    }
+    
+    .sensor-label {
+        font-size: 13px;
+    }
+    
+    .sensor-icon {
+        font-size: 50px;
+        right: 16px;
     }
     
     .pots-container {
@@ -1916,12 +2122,83 @@ input:checked + .slider:before {
         gap: 12px;
     }
     
+    .pot-content {
+        padding: 16px;
+    }
+    
+    .pot-value {
+        font-size: 48px;
+    }
+    
+    .pot-moisture-label {
+        font-size: 11px;
+    }
+    
+    .pot-header {
+        padding: 8px;
+        font-size: 13px;
+    }
+    
+    .page-header {
+        margin-bottom: 16px;
+    }
+    
     .page-header h1 {
-        font-size: 22px;
+        font-size: 20px;
+        gap: 8px;
+    }
+    
+    .page-header h1 i {
+        font-size: 20px;
     }
     
     .page-header p {
         font-size: 13px;
+    }
+    
+    .actuator-controls {
+        gap: 12px;
+    }
+    
+    .actuator-card {
+        padding: 16px;
+    }
+    
+    .actuator-header {
+        font-size: 16px;
+    }
+    
+    .stat-card {
+        padding: 16px;
+        gap: 15px;
+    }
+    
+    .stat-card i {
+        font-size: 36px;
+    }
+    
+    .stat-number {
+        font-size: 24px;
+    }
+    
+    .card-header {
+        padding: 16px 20px;
+    }
+    
+    .card-header h2 {
+        font-size: 18px;
+    }
+    
+    .card-body {
+        padding: 16px;
+    }
+    
+    .sidebar {
+        width: 260px;
+    }
+    
+    .sidebar.mobile-open {
+        width: 260px;
     }
 }
 
