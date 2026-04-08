@@ -1,7 +1,7 @@
 // Import Firebase
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js';
-import { getDatabase, ref, set, get, onValue, update } from 'https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js';
+import { getDatabase, ref, onValue, update } from 'https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -19,7 +19,241 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const database = getDatabase(app);
-const kontrolRef = ref(database, 'kontrol');
+const KONTROL_BASE_PATH = 'kontrol_1';
+const kontrolRef = ref(database, KONTROL_BASE_PATH);
+let activeThresholdKey = 'threshold_1';
+let lastKontrolData = {};
+let thresholdProfiles = ['threshold_1'];
+
+function getThresholdNumber(thresholdKey) {
+    const match = String(thresholdKey || '').match(/^threshold_(\d+)$/i);
+    return match ? parseInt(match[1], 10) : 1;
+}
+
+function extractThresholdKeys(data) {
+    const keys = Object.keys(data || {})
+        .filter((key) => /^threshold_\d+$/i.test(key))
+        .sort((a, b) => getThresholdNumber(a) - getThresholdNumber(b));
+
+    return keys.length > 0 ? keys : ['threshold_1'];
+}
+
+function resolveThresholdKey(value) {
+    if (!value) {
+        return thresholdProfiles[0] || 'threshold_1';
+    }
+
+    return thresholdProfiles.includes(value) ? value : (thresholdProfiles[0] || 'threshold_1');
+}
+
+function getThresholdLabel(thresholdKey) {
+    return `Threshold ${getThresholdNumber(thresholdKey)}`;
+}
+
+function normalizePotAktif(potAktifSource = {}) {
+    return {
+        pot_1: potAktifSource.pot_1 === true,
+        pot_2: potAktifSource.pot_2 === true,
+        pot_3: potAktifSource.pot_3 === true,
+        pot_4: potAktifSource.pot_4 === true,
+        pot_5: potAktifSource.pot_5 === true
+    };
+}
+
+function getThresholdDataByKey(data, thresholdKey) {
+    const source = data?.[thresholdKey] || {};
+    const batasBawah = Number(source.batas_bawah);
+    const batasAtas = Number(source.batas_atas);
+
+    return {
+        batas_bawah: Number.isFinite(batasBawah) ? batasBawah : 30,
+        batas_atas: Number.isFinite(batasAtas) ? batasAtas : 70,
+        pot_aktif: normalizePotAktif(source.pot_aktif),
+        pompa_air: !!source.pompa_air,
+        pompa_pupuk: !!source.pompa_pupuk,
+        pompa_pengaduk: !!source.pompa_pengaduk,
+        aktif: source.aktif === true,
+        smart_mode: source.smart_mode === true
+    };
+}
+
+function getActiveThresholdData(data) {
+    return getThresholdDataByKey(data, activeThresholdKey);
+}
+
+function getNextThresholdKey() {
+    const indices = thresholdProfiles.map(getThresholdNumber).filter((value) => Number.isFinite(value));
+    const nextIndex = indices.length > 0 ? Math.max(...indices) + 1 : 1;
+    return `threshold_${nextIndex}`;
+}
+
+function updateThresholdProfileUI() {
+    const activeLabel = document.getElementById('activeThresholdLabel');
+    if (activeLabel) {
+        activeLabel.textContent = `Profil aktif: ${getThresholdLabel(activeThresholdKey)}`;
+    }
+
+    const container = document.getElementById('thresholdProfileContainer');
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = thresholdProfiles.map((thresholdKey) => {
+        const thresholdData = getThresholdDataByKey(lastKontrolData, thresholdKey);
+        const isActive = thresholdKey === activeThresholdKey;
+        const deleteDisabled = thresholdProfiles.length <= 1;
+
+        return `
+            <div class="threshold-profile-item ${isActive ? 'active' : ''}">
+                <div class="threshold-profile-item-main">
+                    <div class="threshold-profile-item-title">${getThresholdLabel(thresholdKey)}</div>
+                    <div class="threshold-profile-item-meta">Min ${thresholdData.batas_bawah}% | Max ${thresholdData.batas_atas}%</div>
+                </div>
+                <div class="threshold-profile-item-actions">
+                    <button type="button" class="threshold-action-btn btn-activate-threshold ${isActive ? 'active' : ''}" data-threshold-action="select" data-threshold-key="${thresholdKey}">${isActive ? 'Aktif' : 'Pilih'}</button>
+                    <button type="button" class="threshold-action-btn btn-delete-threshold" data-threshold-action="delete" data-threshold-key="${thresholdKey}" ${deleteDisabled ? 'disabled' : ''}>Hapus</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function switchThresholdProfile(selectedKey) {
+    const thresholdKey = resolveThresholdKey(selectedKey);
+    if (thresholdKey === activeThresholdKey) {
+        return;
+    }
+
+    const previousKey = activeThresholdKey;
+    activeThresholdKey = thresholdKey;
+    updateThresholdProfileUI();
+    applyThresholdDataToUI(getActiveThresholdData(lastKontrolData));
+
+    try {
+        await update(kontrolRef, {
+            threshold_aktif: thresholdKey
+        });
+        showNotification(`Berpindah ke ${getThresholdLabel(thresholdKey)}`, 'info');
+    } catch (error) {
+        console.error('Error switching threshold profile:', error);
+        activeThresholdKey = previousKey;
+        updateThresholdProfileUI();
+        applyThresholdDataToUI(getActiveThresholdData(lastKontrolData));
+        showNotification('Gagal mengganti profil threshold', 'error');
+    }
+}
+
+async function addThresholdProfile() {
+    const newThresholdKey = getNextThresholdKey();
+    const baseData = getActiveThresholdData(lastKontrolData);
+
+    const payload = {
+        aktif: mainModeActive,
+        smart_mode: mainModeActive,
+        batas_bawah: baseData.batas_bawah,
+        batas_atas: baseData.batas_atas,
+        pompa_air: baseData.pompa_air,
+        pompa_pupuk: baseData.pompa_pupuk,
+        pompa_pengaduk: baseData.pompa_pengaduk,
+        pot_aktif: normalizePotAktif(baseData.pot_aktif)
+    };
+
+    try {
+        await update(kontrolRef, {
+            [newThresholdKey]: payload,
+            threshold_aktif: newThresholdKey
+        });
+        showNotification(`${getThresholdLabel(newThresholdKey)} berhasil ditambahkan`, 'success');
+    } catch (error) {
+        console.error('Error adding threshold profile:', error);
+        showNotification('Gagal menambah profil threshold', 'error');
+    }
+}
+
+async function deleteThresholdProfile(thresholdKey) {
+    if (!thresholdProfiles.includes(thresholdKey)) {
+        return;
+    }
+
+    if (thresholdProfiles.length <= 1) {
+        showNotification('Minimal harus ada 1 profil threshold', 'warning');
+        return;
+    }
+
+    if (!confirm(`Hapus ${getThresholdLabel(thresholdKey)}?`)) {
+        return;
+    }
+
+    const fallbackKey = thresholdProfiles.find((key) => key !== thresholdKey) || 'threshold_1';
+    const updates = {
+        [thresholdKey]: null
+    };
+
+    if (activeThresholdKey === thresholdKey) {
+        updates.threshold_aktif = fallbackKey;
+    }
+
+    try {
+        await update(kontrolRef, updates);
+        showNotification(`${getThresholdLabel(thresholdKey)} berhasil dihapus`, 'success');
+    } catch (error) {
+        console.error('Error deleting threshold profile:', error);
+        showNotification('Gagal menghapus profil threshold', 'error');
+    }
+}
+
+function applyThresholdDataToUI(thresholdData) {
+    // Update slider values
+    document.getElementById('globalMin').value = thresholdData.batas_bawah;
+    document.getElementById('minValue').textContent = thresholdData.batas_bawah;
+    document.getElementById('globalMax').value = thresholdData.batas_atas;
+    document.getElementById('maxValue').textContent = thresholdData.batas_atas;
+
+    // Load selected pots
+    for (let i = 1; i <= 5; i++) {
+        const checkbox = document.getElementById(`pot${i}`);
+        const potKey = `pot_${i}`;
+        if (checkbox) {
+            checkbox.checked = thresholdData.pot_aktif[potKey] === true;
+        }
+    }
+
+    // Load pump states
+    const pompaAir = document.getElementById('pompaAir');
+    const pompaNutrisi = document.getElementById('pompaNutrisi');
+    const pengadukOtomatis = document.getElementById('pengadukOtomatis');
+    const pompaAirOption = pompaAir?.closest('.pump-option');
+    const pompaNutrisiOption = pompaNutrisi?.closest('.pump-option');
+    const pengadukOption = pengadukOtomatis?.closest('.pump-option');
+
+    if (!pompaAir || !pompaNutrisi) {
+        return;
+    }
+
+    pompaAir.checked = thresholdData.pompa_air;
+    pompaNutrisi.checked = thresholdData.pompa_pupuk;
+    if (pengadukOtomatis) {
+        pengadukOtomatis.checked = thresholdData.pompa_pengaduk;
+    }
+
+    pompaAirOption?.classList.remove('active', 'inactive');
+    pompaNutrisiOption?.classList.remove('active', 'inactive');
+    pengadukOption?.classList.remove('active', 'inactive');
+
+    if (pengadukOtomatis?.checked) {
+        pengadukOption?.classList.add('active');
+        pompaAirOption?.classList.add('inactive');
+        pompaNutrisiOption?.classList.add('inactive');
+    } else if (pompaNutrisi.checked) {
+        pompaNutrisiOption?.classList.add('active');
+        pompaAirOption?.classList.add('inactive');
+        pengadukOption?.classList.add('inactive');
+    } else if (pompaAir.checked) {
+        pompaAirOption?.classList.add('active');
+        pompaNutrisiOption?.classList.add('inactive');
+        pengadukOption?.classList.add('inactive');
+    }
+}
 
 // Notification function
 function showNotification(message, type = 'success') {
@@ -72,14 +306,20 @@ function showNotification(message, type = 'success') {
 
 // Authentication check
 onAuthStateChanged(auth, (user) => {
+    const loginMessage = document.getElementById('loginMessage');
+
     if (user) {
         document.getElementById('userEmail').textContent = user.email;
         document.getElementById('dashboardPage').style.display = 'block';
-        document.getElementById('loginMessage').hidden = true;
+        if (loginMessage) {
+            loginMessage.hidden = true;
+        }
         loadControllerData(); // Load data from Firebase
     } else {
         document.getElementById('dashboardPage').style.display = 'none';
-        document.getElementById('loginMessage').hidden = false;
+        if (loginMessage) {
+            loginMessage.hidden = false;
+        }
         setTimeout(() => {
             window.location.href = '../index.html';
         }, 2000);
@@ -163,7 +403,10 @@ window.toggleMainMode = function() {
     
     // Save to Firebase
     update(kontrolRef, {
-        otomatis: mainModeActive
+        otomatis: mainModeActive,
+        [`${activeThresholdKey}/aktif`]: mainModeActive,
+        [`${activeThresholdKey}/smart_mode`]: mainModeActive,
+        threshold_aktif: activeThresholdKey
     }).catch((error) => {
         console.error('Error updating Firebase:', error);
         showNotification('Gagal menyimpan ke server', 'error');
@@ -181,6 +424,17 @@ function loadControllerData() {
     onValue(kontrolRef, (snapshot) => {
         if (snapshot.exists()) {
             const data = snapshot.val();
+            lastKontrolData = data;
+            thresholdProfiles = extractThresholdKeys(data);
+
+            if (data.threshold_aktif) {
+                activeThresholdKey = resolveThresholdKey(data.threshold_aktif);
+            } else {
+                activeThresholdKey = resolveThresholdKey(activeThresholdKey);
+            }
+
+            updateThresholdProfileUI();
+            const thresholdData = getActiveThresholdData(data);
             console.log('Controller data loaded:', data);
             
             // Get all pot checkboxes and action buttons
@@ -236,71 +490,41 @@ function loadControllerData() {
                     if (pengadukOtomatis) pengadukOtomatis.disabled = true;
                 }
             }
-            
-            // Load selected pots
-            if (data.pot_otomatis !== undefined) {
-                for (let i = 1; i <= 5; i++) {
-                    const checkbox = document.getElementById(`pot${i}`);
-                    if (checkbox && data.pot_otomatis[`pot${i}`] !== undefined) {
-                        checkbox.checked = data.pot_otomatis[`pot${i}`];
-                    }
-                }
-            }
-            
-            // Load pump states
-            if (data.pompa_otomatis !== undefined) {
-                const pompaAirOption = pompaAir.closest('.pump-option');
-                const pompaNutrisiOption = pompaNutrisi.closest('.pump-option');
-                const pengadukOption = pengadukOtomatis ? pengadukOtomatis.closest('.pump-option') : null;
-                
-                // Reset classes first
-                pompaAirOption.classList.remove('active', 'inactive');
-                pompaNutrisiOption.classList.remove('active', 'inactive');
-                pengadukOption?.classList.remove('active', 'inactive');
-                
-                if (data.pompa_otomatis.pompa_air !== undefined) {
-                    pompaAir.checked = data.pompa_otomatis.pompa_air;
-                }
-                if (data.pompa_otomatis.pompa_nutrisi !== undefined) {
-                    pompaNutrisi.checked = data.pompa_otomatis.pompa_nutrisi;
-                }
 
-                if (pengadukOtomatis && data.pompa_otomatis.pengaduk !== undefined) {
-                    pengadukOtomatis.checked = data.pompa_otomatis.pengaduk;
-                }
-
-                // Apply active/inactive styling (priority: pengaduk > nutrisi > air)
-                if (pengadukOtomatis?.checked) {
-                    pengadukOption?.classList.add('active');
-                    pompaAirOption.classList.add('inactive');
-                    pompaNutrisiOption.classList.add('inactive');
-                } else if (pompaNutrisi.checked) {
-                    pompaNutrisiOption.classList.add('active');
-                    pompaAirOption.classList.add('inactive');
-                    pengadukOption?.classList.add('inactive');
-                } else if (pompaAir.checked) {
-                    pompaAirOption.classList.add('active');
-                    pompaNutrisiOption.classList.add('inactive');
-                    pengadukOption?.classList.add('inactive');
-                }
-            }
-            
-            // Update slider values
-            if (data.batas_bawah !== undefined) {
-                document.getElementById('globalMin').value = data.batas_bawah;
-                document.getElementById('minValue').textContent = data.batas_bawah;
-            }
-            
-            if (data.batas_atas !== undefined) {
-                document.getElementById('globalMax').value = data.batas_atas;
-                document.getElementById('maxValue').textContent = data.batas_atas;
-            }
+            applyThresholdDataToUI(thresholdData);
         }
     });
 }
 
 // Load saved settings on page load
 window.addEventListener('DOMContentLoaded', () => {
+    updateThresholdProfileUI();
+
+    document.getElementById('btnAddThreshold')?.addEventListener('click', () => {
+        addThresholdProfile();
+    });
+
+    document.getElementById('thresholdProfileContainer')?.addEventListener('click', (event) => {
+        const actionBtn = event.target.closest('[data-threshold-action]');
+        if (!actionBtn) {
+            return;
+        }
+
+        const action = actionBtn.dataset.thresholdAction;
+        const thresholdKey = actionBtn.dataset.thresholdKey;
+        if (!thresholdKey) {
+            return;
+        }
+
+        if (action === 'select') {
+            switchThresholdProfile(thresholdKey);
+            return;
+        }
+
+        if (action === 'delete') {
+            deleteThresholdProfile(thresholdKey);
+        }
+    });
     
     // Update display when slider changes - Minimum
     document.getElementById('globalMin').addEventListener('input', function() {
@@ -334,7 +558,7 @@ window.addEventListener('DOMContentLoaded', () => {
         
         // Save to Firebase
         update(kontrolRef, {
-            batas_bawah: finalValue
+            [`${activeThresholdKey}/batas_bawah`]: finalValue
         }).then(() => {
             showNotification('Kelembaban minimum: ' + finalValue + '%', 'success');
         }).catch((error) => {
@@ -375,7 +599,7 @@ window.addEventListener('DOMContentLoaded', () => {
         
         // Save to Firebase
         update(kontrolRef, {
-            batas_atas: finalValue
+            [`${activeThresholdKey}/batas_atas`]: finalValue
         }).then(() => {
             showNotification('Kelembaban maksimum: ' + finalValue + '%', 'success');
         }).catch((error) => {
@@ -390,13 +614,13 @@ window.addEventListener('DOMContentLoaded', () => {
         checkbox.addEventListener('change', function() {
             const potId = this.id;
             const isChecked = this.checked;
+            const potNumber = potId.replace('pot', '');
+            const potKey = `pot_${potNumber}`;
             
             // Save to Firebase
-            const potOtomatisPath = `pot_otomatis/${potId}`;
-            update(ref(database, 'kontrol'), {
-                [`pot_otomatis/${potId}`]: isChecked
+            update(kontrolRef, {
+                [`${activeThresholdKey}/pot_aktif/${potKey}`]: isChecked
             }).then(() => {
-                const potNumber = potId.replace('pot', '');
                 if (isChecked) {
                     showNotification(`Pot ${potNumber} dipilih untuk penyiraman otomatis`, 'success');
                 } else {
@@ -419,12 +643,13 @@ window.addEventListener('DOMContentLoaded', () => {
         potCheckboxes.forEach(checkbox => {
             if (!checkbox.disabled) {
                 checkbox.checked = true;
-                updates[`pot_otomatis/${checkbox.id}`] = true;
+                const potNumber = checkbox.id.replace('pot', '');
+                updates[`${activeThresholdKey}/pot_aktif/pot_${potNumber}`] = true;
             }
         });
         
         // Save all to Firebase
-        update(ref(database, 'kontrol'), updates).then(() => {
+        update(kontrolRef, updates).then(() => {
             showNotification('Semua pot dipilih untuk penyiraman otomatis', 'success');
         }).catch((error) => {
             console.error('Error updating Firebase:', error);
@@ -440,12 +665,13 @@ window.addEventListener('DOMContentLoaded', () => {
         potCheckboxes.forEach(checkbox => {
             if (!checkbox.disabled) {
                 checkbox.checked = false;
-                updates[`pot_otomatis/${checkbox.id}`] = false;
+                const potNumber = checkbox.id.replace('pot', '');
+                updates[`${activeThresholdKey}/pot_aktif/pot_${potNumber}`] = false;
             }
         });
         
         // Save all to Firebase
-        update(ref(database, 'kontrol'), updates).then(() => {
+        update(kontrolRef, updates).then(() => {
             showNotification('Semua pot tidak dipilih untuk penyiraman otomatis', 'info');
         }).catch((error) => {
             console.error('Error updating Firebase:', error);
@@ -481,12 +707,12 @@ window.addEventListener('DOMContentLoaded', () => {
         
         // Save to Firebase
         const updates = {
-            'pompa_otomatis/pompa_air': isChecked,
-            'pompa_otomatis/pompa_nutrisi': false,
-            'pompa_otomatis/pengaduk': false
+            [`${activeThresholdKey}/pompa_air`]: isChecked,
+            [`${activeThresholdKey}/pompa_pupuk`]: false,
+            [`${activeThresholdKey}/pompa_pengaduk`]: false
         };
         
-        update(ref(database, 'kontrol'), updates).then(() => {
+        update(kontrolRef, updates).then(() => {
             if (isChecked) {
                 showNotification('Pompa Air diaktifkan untuk mode otomatis', 'success');
             } else {
@@ -528,12 +754,12 @@ window.addEventListener('DOMContentLoaded', () => {
         
         // Save to Firebase
         const updates = {
-            'pompa_otomatis/pompa_air': false,
-            'pompa_otomatis/pompa_nutrisi': isChecked,
-            'pompa_otomatis/pengaduk': false
+            [`${activeThresholdKey}/pompa_air`]: false,
+            [`${activeThresholdKey}/pompa_pupuk`]: isChecked,
+            [`${activeThresholdKey}/pompa_pengaduk`]: false
         };
         
-        update(ref(database, 'kontrol'), updates).then(() => {
+        update(kontrolRef, updates).then(() => {
             if (isChecked) {
                 showNotification('Pompa Larutan Nutrisi diaktifkan untuk mode otomatis', 'success');
             } else {
@@ -579,12 +805,12 @@ window.addEventListener('DOMContentLoaded', () => {
             }
 
             const updates = {
-                'pompa_otomatis/pompa_air': false,
-                'pompa_otomatis/pompa_nutrisi': false,
-                'pompa_otomatis/pengaduk': isChecked
+                [`${activeThresholdKey}/pompa_air`]: false,
+                [`${activeThresholdKey}/pompa_pupuk`]: false,
+                [`${activeThresholdKey}/pompa_pengaduk`]: isChecked
             };
 
-            update(ref(database, 'kontrol'), updates).then(() => {
+            update(kontrolRef, updates).then(() => {
                 if (isChecked) {
                     showNotification('Pengaduk diaktifkan untuk mode otomatis', 'success');
                 } else {

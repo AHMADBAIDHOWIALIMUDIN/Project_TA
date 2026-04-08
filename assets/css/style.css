@@ -3686,6 +3686,200 @@ input:checked + .slider:before {
     margin: 0;
 }
 
+.threshold-profile-card {
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 22px;
+    margin: 20px 0;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+}
+
+.threshold-profile-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.threshold-profile-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.threshold-profile-header i {
+    color: #10b981;
+    font-size: 22px;
+}
+
+.threshold-profile-header h3 {
+    margin: 0;
+    font-size: 20px;
+    color: var(--text-primary);
+}
+
+.threshold-profile-subtitle {
+    margin: 0 0 14px;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.btn-add-threshold {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.btn-add-threshold:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+}
+
+.threshold-profile-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.threshold-profile-item {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--bg-secondary);
+}
+
+.threshold-profile-item.active {
+    border-color: #34d399;
+    background: #ecfdf5;
+}
+
+.threshold-profile-item-main {
+    flex: 1;
+    min-width: 180px;
+}
+
+.threshold-profile-item-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.threshold-profile-item-meta {
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.threshold-profile-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.threshold-action-btn {
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-activate-threshold {
+    color: #065f46;
+    border-color: #86efac;
+}
+
+.btn-activate-threshold.active {
+    background: #10b981;
+    color: #fff;
+    border-color: #10b981;
+}
+
+.btn-delete-threshold {
+    color: #b91c1c;
+    border-color: #fecaca;
+}
+
+.btn-delete-threshold:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .threshold-profile-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .threshold-profile-item-main {
+        width: 100%;
+    }
+
+    .threshold-profile-item-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .threshold-action-btn {
+        flex: 1;
+        text-align: center;
+    }
+}
+
+.threshold-profile-controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.threshold-profile-btn {
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-radius: 10px;
+    padding: 9px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.threshold-profile-btn:hover {
+    border-color: #10b981;
+    color: #047857;
+}
+
+.threshold-profile-btn.active {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+    border-color: #059669;
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.25);
+}
+
+.threshold-profile-active {
+    margin-top: 12px;
+    font-size: 13px;
+    color: #6b7280;
+    font-weight: 600;
+}
+
 .settings-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));

@@ -2,7 +2,7 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
-import { getDatabase, ref, set, onValue, get, push, update, remove } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, update, remove } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -28,6 +28,74 @@ let pumpWaktuState = {
     pompa_nutrisi: false,
     pengaduk: false
 };
+
+const MODE_WAKTU_BASE_PATH = 'kontrol_1';
+
+function getSchedulePath(scheduleId) {
+    return `${MODE_WAKTU_BASE_PATH}/${scheduleId}`;
+}
+
+function getNextScheduleId() {
+    const indices = schedules
+        .map((item) => {
+            const match = String(item.id || '').match(/^jadwal_(\d+)$/i);
+            return match ? parseInt(match[1], 10) : 0;
+        })
+        .filter((value) => Number.isFinite(value));
+
+    const nextIndex = indices.length > 0 ? Math.max(...indices) + 1 : 1;
+    return `jadwal_${nextIndex}`;
+}
+
+function normalizeScheduleFromMobile(id, data) {
+    const potAktif = data?.pot_aktif || {};
+    const pots = [];
+
+    for (let i = 1; i <= 5; i++) {
+        if (potAktif[`pot_${i}`] === true || potAktif[`pot${i}`] === true) {
+            pots.push(`pot${i}`);
+        }
+    }
+
+    let pumpType = 'air';
+    if (data?.pompa_pengaduk) {
+        pumpType = 'pengaduk';
+    } else if (data?.pompa_pupuk) {
+        pumpType = 'nutrisi';
+    } else if (data?.pompa_air) {
+        pumpType = 'air';
+    }
+
+    return {
+        id,
+        name: data?.nama || `Jadwal ${String(id).replace('jadwal_', '')}`,
+        time: data?.waktu || '',
+        duration: Number(data?.durasi || 30),
+        pots,
+        pumpType,
+        aktif: data?.aktif === true
+    };
+}
+
+function toMobileScheduleData(scheduleData) {
+    const selectedPots = Array.isArray(scheduleData.pots) ? scheduleData.pots : [];
+
+    return {
+        aktif: true,
+        durasi: Number(scheduleData.duration || 30),
+        waktu: scheduleData.time || '',
+        pompa_air: scheduleData.pumpType === 'air',
+        pompa_pupuk: scheduleData.pumpType === 'nutrisi',
+        pompa_pengaduk: scheduleData.pumpType === 'pengaduk',
+        pot_aktif: {
+            pot_1: selectedPots.includes('pot1'),
+            pot_2: selectedPots.includes('pot2'),
+            pot_3: selectedPots.includes('pot3'),
+            pot_4: selectedPots.includes('pot4'),
+            pot_5: selectedPots.includes('pot5')
+        }
+    };
+}
 
 // Notification function
 function showNotification(message, type = 'success') {
@@ -86,8 +154,7 @@ document.getElementById('signOutBtn')?.addEventListener('click', async () => {
 
 // Initialize mode
 function initializeMode() {
-    const statusRef = ref(database, 'kontrol/waktu');
-    const pumpWaktuRef = ref(database, 'kontrol/pompa_waktu');
+    const statusRef = ref(database, `${MODE_WAKTU_BASE_PATH}/otomatis`);
     
     onValue(statusRef, (snapshot) => {
         const isActive = snapshot.val() === true || snapshot.val() === 1;
@@ -126,47 +193,16 @@ function initializeMode() {
         }
     });
 
-    // Load pump state (Air/Nutrisi) for mode waktu
-    onValue(pumpWaktuRef, (snapshot) => {
-        const data = snapshot.val() || {};
-        pumpWaktuState = {
-            pompa_air: !!data.pompa_air,
-            pompa_nutrisi: !!data.pompa_nutrisi,
-            pengaduk: !!data.pengaduk
-        };
+    // Initialize pump toggle display from local default state.
+    const pompaAirWaktu = document.getElementById('pompaAirWaktu');
+    const pompaNutrisiWaktu = document.getElementById('pompaNutrisiWaktu');
+    const pengadukWaktu = document.getElementById('pengadukWaktu');
 
-        const pompaAirWaktu = document.getElementById('pompaAirWaktu');
-        const pompaNutrisiWaktu = document.getElementById('pompaNutrisiWaktu');
-        const pengadukWaktu = document.getElementById('pengadukWaktu');
-        if (!pompaAirWaktu || !pompaNutrisiWaktu || !pengadukWaktu) return;
-
-        const pompaAirOption = pompaAirWaktu.closest('.pump-option');
-        const pompaNutrisiOption = pompaNutrisiWaktu.closest('.pump-option');
-        const pengadukOption = pengadukWaktu.closest('.pump-option');
-
+    if (pompaAirWaktu && pompaNutrisiWaktu && pengadukWaktu) {
         pompaAirWaktu.checked = pumpWaktuState.pompa_air;
         pompaNutrisiWaktu.checked = pumpWaktuState.pompa_nutrisi;
         pengadukWaktu.checked = pumpWaktuState.pengaduk;
-
-        pompaAirOption?.classList.remove('active', 'inactive');
-        pompaNutrisiOption?.classList.remove('active', 'inactive');
-        pengadukOption?.classList.remove('active', 'inactive');
-
-        // Apply active/inactive styling (priority: pengaduk > nutrisi > air)
-        if (pumpWaktuState.pengaduk) {
-            pengadukOption?.classList.add('active');
-            pompaAirOption?.classList.add('inactive');
-            pompaNutrisiOption?.classList.add('inactive');
-        } else if (pumpWaktuState.pompa_nutrisi) {
-            pompaNutrisiOption?.classList.add('active');
-            pompaAirOption?.classList.add('inactive');
-            pengadukOption?.classList.add('inactive');
-        } else if (pumpWaktuState.pompa_air) {
-            pompaAirOption?.classList.add('active');
-            pompaNutrisiOption?.classList.add('inactive');
-            pengadukOption?.classList.add('inactive');
-        }
-    });
+    }
     
     // Load schedules from Firebase
     loadSchedulesFromFirebase();
@@ -211,10 +247,11 @@ function setupPumpToggles() {
         }
 
         try {
-            await update(ref(database, 'kontrol'), {
-                'pompa_waktu/pompa_air': isChecked,
-                ...(isChecked ? { 'pompa_waktu/pompa_nutrisi': false, 'pompa_waktu/pengaduk': false } : {})
-            });
+            pumpWaktuState = {
+                pompa_air: isChecked,
+                pompa_nutrisi: isChecked ? false : pompaNutrisiWaktu.checked,
+                pengaduk: isChecked ? false : pengadukWaktu.checked
+            };
         } catch (error) {
             console.error('Error updating pump state:', error);
             // Revert toggle state on error
@@ -248,10 +285,11 @@ function setupPumpToggles() {
         }
 
         try {
-            await update(ref(database, 'kontrol'), {
-                'pompa_waktu/pompa_nutrisi': isChecked,
-                ...(isChecked ? { 'pompa_waktu/pompa_air': false, 'pompa_waktu/pengaduk': false } : {})
-            });
+            pumpWaktuState = {
+                pompa_air: isChecked ? false : pompaAirWaktu.checked,
+                pompa_nutrisi: isChecked,
+                pengaduk: isChecked ? false : pengadukWaktu.checked
+            };
         } catch (error) {
             console.error('Error updating pump state:', error);
             // Revert toggle state on error
@@ -285,10 +323,11 @@ function setupPumpToggles() {
         }
 
         try {
-            await update(ref(database, 'kontrol'), {
-                'pompa_waktu/pengaduk': isChecked,
-                ...(isChecked ? { 'pompa_waktu/pompa_air': false, 'pompa_waktu/pompa_nutrisi': false } : {})
-            });
+            pumpWaktuState = {
+                pompa_air: isChecked ? false : pompaAirWaktu.checked,
+                pompa_nutrisi: isChecked ? false : pompaNutrisiWaktu.checked,
+                pengaduk: isChecked
+            };
         } catch (error) {
             console.error('Error updating pump state:', error);
             this.checked = !isChecked;
@@ -299,18 +338,23 @@ function setupPumpToggles() {
 
 // Load schedules from Firebase
 function loadSchedulesFromFirebase() {
-    const schedulesRef = ref(database, 'kontrol/jadwal_waktu');
+    const schedulesRef = ref(database, MODE_WAKTU_BASE_PATH);
     
     onValue(schedulesRef, (snapshot) => {
         schedules = [];
         const data = snapshot.val();
         
         if (data) {
-            Object.keys(data).forEach(key => {
-                schedules.push({
-                    id: key,
-                    ...data[key]
-                });
+            Object.keys(data).forEach((key) => {
+                if (/^jadwal_\d+$/i.test(key) && data[key] && typeof data[key] === 'object') {
+                    schedules.push(normalizeScheduleFromMobile(key, data[key]));
+                }
+            });
+
+            schedules.sort((a, b) => {
+                const aNum = parseInt(String(a.id).replace('jadwal_', ''), 10) || 0;
+                const bNum = parseInt(String(b.id).replace('jadwal_', ''), 10) || 0;
+                return aNum - bNum;
             });
         }
         
@@ -420,10 +464,9 @@ window.toggleMainMode = function() {
     const mainToggle = document.getElementById('mainToggle');
     const isActive = mainToggle.classList.contains('active');
     const newStatus = !isActive;
-    const statusRef = ref(database, 'kontrol/waktu');
     
-    update(ref(database, 'kontrol'), {
-        waktu: newStatus
+    update(ref(database, MODE_WAKTU_BASE_PATH), {
+        otomatis: newStatus
     }).then(() => {
         showNotification(newStatus ? 'Mode Waktu diaktifkan' : 'Mode Waktu dinonaktifkan', newStatus ? 'success' : 'warning');
     }).catch((error) => {
@@ -522,11 +565,13 @@ window.saveSchedule = function() {
         pots,
         pumpType
     };
+
+    const mobileScheduleData = toMobileScheduleData(scheduleData);
     
     if (scheduleId) {
         // Update existing schedule
-        const scheduleRef = ref(database, `kontrol/jadwal_waktu/${scheduleId}`);
-        update(scheduleRef, scheduleData)
+        const scheduleRef = ref(database, getSchedulePath(scheduleId));
+        update(scheduleRef, mobileScheduleData)
             .then(() => {
                 closeScheduleModal();
                 showNotification('Jadwal berhasil diupdate!', 'success');
@@ -537,8 +582,9 @@ window.saveSchedule = function() {
             });
     } else {
         // Add new schedule
-        const schedulesRef = ref(database, 'kontrol/jadwal_waktu');
-        push(schedulesRef, scheduleData)
+        const newScheduleId = getNextScheduleId();
+        const newScheduleRef = ref(database, getSchedulePath(newScheduleId));
+        set(newScheduleRef, mobileScheduleData)
             .then(() => {
                 closeScheduleModal();
                 showNotification('Jadwal berhasil ditambahkan!', 'success');
@@ -567,9 +613,10 @@ window.duplicateSchedule = function(scheduleId) {
         pots: schedule.pots,
         pumpType: schedule.pumpType
     };
-    
-    const schedulesRef = ref(database, 'kontrol/jadwal_waktu');
-    push(schedulesRef, newSchedule)
+
+    const newScheduleId = getNextScheduleId();
+    const newScheduleRef = ref(database, getSchedulePath(newScheduleId));
+    set(newScheduleRef, toMobileScheduleData(newSchedule))
         .then(() => {
             showNotification('Jadwal berhasil diduplikat!', 'success');
         })
@@ -583,7 +630,7 @@ window.duplicateSchedule = function(scheduleId) {
 window.deleteSchedule = function(scheduleId) {
     if (!confirm('Apakah Anda yakin ingin menghapus jadwal ini?')) return;
     
-    const scheduleRef = ref(database, `kontrol/jadwal_waktu/${scheduleId}`);
+    const scheduleRef = ref(database, getSchedulePath(scheduleId));
     remove(scheduleRef)
         .then(() => {
             showNotification('Jadwal berhasil dihapus!', 'success');
