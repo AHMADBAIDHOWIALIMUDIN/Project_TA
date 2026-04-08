@@ -23,6 +23,11 @@ const database = getDatabase(app);
 
 let schedules = [];
 let isPageLoaded = false;
+let pumpWaktuState = {
+    pompa_air: false,
+    pompa_nutrisi: false,
+    pengaduk: false
+};
 
 // Notification function
 function showNotification(message, type = 'success') {
@@ -58,11 +63,11 @@ onAuthStateChanged(auth, (user) => {
     if (user) {
         document.getElementById('userEmail').textContent = user.email;
         document.getElementById('dashboardPage').style.display = 'block';
-        document.getElementById('loginMessage').hidden = true;
+        // document.getElementById('loginMessage').hidden = true;
         initializeMode();
     } else {
         document.getElementById('dashboardPage').style.display = 'none';
-        document.getElementById('loginMessage').hidden = false;
+        // document.getElementById('loginMessage').hidden = false;
         setTimeout(() => {
             window.location.href = '../index.html';
         }, 2000);
@@ -82,6 +87,7 @@ document.getElementById('signOutBtn')?.addEventListener('click', async () => {
 // Initialize mode
 function initializeMode() {
     const statusRef = ref(database, 'kontrol/waktu');
+    const pumpWaktuRef = ref(database, 'kontrol/pompa_waktu');
     
     onValue(statusRef, (snapshot) => {
         const isActive = snapshot.val() === true || snapshot.val() === 1;
@@ -89,6 +95,9 @@ function initializeMode() {
         const statusIndicator = document.getElementById('statusIndicator');
         const statusText = document.getElementById('statusText');
         const btnAddSchedule = document.getElementById('btnAddSchedule');
+        const pompaAirWaktu = document.getElementById('pompaAirWaktu');
+        const pompaNutrisiWaktu = document.getElementById('pompaNutrisiWaktu');
+        const pengadukWaktu = document.getElementById('pengadukWaktu');
         
         if (mainToggle) {
             if (isActive) {
@@ -103,11 +112,59 @@ function initializeMode() {
                 statusIndicator.classList.add('active');
                 statusText.textContent = 'Aktif';
                 if (btnAddSchedule) btnAddSchedule.disabled = false;
+                if (pompaAirWaktu) pompaAirWaktu.disabled = false;
+                if (pompaNutrisiWaktu) pompaNutrisiWaktu.disabled = false;
+                if (pengadukWaktu) pengadukWaktu.disabled = false;
             } else {
                 statusIndicator.classList.remove('active');
                 statusText.textContent = 'Tidak Aktif';
                 if (btnAddSchedule) btnAddSchedule.disabled = true;
+                if (pompaAirWaktu) pompaAirWaktu.disabled = true;
+                if (pompaNutrisiWaktu) pompaNutrisiWaktu.disabled = true;
+                if (pengadukWaktu) pengadukWaktu.disabled = true;
             }
+        }
+    });
+
+    // Load pump state (Air/Nutrisi) for mode waktu
+    onValue(pumpWaktuRef, (snapshot) => {
+        const data = snapshot.val() || {};
+        pumpWaktuState = {
+            pompa_air: !!data.pompa_air,
+            pompa_nutrisi: !!data.pompa_nutrisi,
+            pengaduk: !!data.pengaduk
+        };
+
+        const pompaAirWaktu = document.getElementById('pompaAirWaktu');
+        const pompaNutrisiWaktu = document.getElementById('pompaNutrisiWaktu');
+        const pengadukWaktu = document.getElementById('pengadukWaktu');
+        if (!pompaAirWaktu || !pompaNutrisiWaktu || !pengadukWaktu) return;
+
+        const pompaAirOption = pompaAirWaktu.closest('.pump-option');
+        const pompaNutrisiOption = pompaNutrisiWaktu.closest('.pump-option');
+        const pengadukOption = pengadukWaktu.closest('.pump-option');
+
+        pompaAirWaktu.checked = pumpWaktuState.pompa_air;
+        pompaNutrisiWaktu.checked = pumpWaktuState.pompa_nutrisi;
+        pengadukWaktu.checked = pumpWaktuState.pengaduk;
+
+        pompaAirOption?.classList.remove('active', 'inactive');
+        pompaNutrisiOption?.classList.remove('active', 'inactive');
+        pengadukOption?.classList.remove('active', 'inactive');
+
+        // Apply active/inactive styling (priority: pengaduk > nutrisi > air)
+        if (pumpWaktuState.pengaduk) {
+            pengadukOption?.classList.add('active');
+            pompaAirOption?.classList.add('inactive');
+            pompaNutrisiOption?.classList.add('inactive');
+        } else if (pumpWaktuState.pompa_nutrisi) {
+            pompaNutrisiOption?.classList.add('active');
+            pompaAirOption?.classList.add('inactive');
+            pengadukOption?.classList.add('inactive');
+        } else if (pumpWaktuState.pompa_air) {
+            pompaAirOption?.classList.add('active');
+            pompaNutrisiOption?.classList.add('inactive');
+            pengadukOption?.classList.add('inactive');
         }
     });
     
@@ -118,6 +175,126 @@ function initializeMode() {
     setupAddScheduleButton();
     
     isPageLoaded = true;
+
+    // Setup pump toggles
+    setupPumpToggles();
+}
+
+function setupPumpToggles() {
+    const pompaAirWaktu = document.getElementById('pompaAirWaktu');
+    const pompaNutrisiWaktu = document.getElementById('pompaNutrisiWaktu');
+    const pengadukWaktu = document.getElementById('pengadukWaktu');
+    if (!pompaAirWaktu || !pompaNutrisiWaktu || !pengadukWaktu) return;
+
+    pompaAirWaktu.addEventListener('change', async function () {
+        const isChecked = this.checked;
+        const nutrisiToggle = pompaNutrisiWaktu;
+        const pengadukToggle = pengadukWaktu;
+
+        const pompaAirOption = this.closest('.pump-option');
+        const pompaNutrisiOption = nutrisiToggle.closest('.pump-option');
+        const pengadukOption = pengadukToggle.closest('.pump-option');
+
+        if (isChecked) {
+            nutrisiToggle.checked = false;
+            pengadukToggle.checked = false;
+            pompaAirOption?.classList.add('active');
+            pompaAirOption?.classList.remove('inactive');
+            pompaNutrisiOption?.classList.remove('active');
+            pompaNutrisiOption?.classList.add('inactive');
+            pengadukOption?.classList.remove('active');
+            pengadukOption?.classList.add('inactive');
+        } else {
+            pompaAirOption?.classList.remove('active', 'inactive');
+            pompaNutrisiOption?.classList.remove('inactive');
+            pengadukOption?.classList.remove('inactive');
+        }
+
+        try {
+            await update(ref(database, 'kontrol'), {
+                'pompa_waktu/pompa_air': isChecked,
+                ...(isChecked ? { 'pompa_waktu/pompa_nutrisi': false, 'pompa_waktu/pengaduk': false } : {})
+            });
+        } catch (error) {
+            console.error('Error updating pump state:', error);
+            // Revert toggle state on error
+            this.checked = !isChecked;
+            showNotification('Gagal menyimpan pilihan pompa', 'error');
+        }
+    });
+
+    pompaNutrisiWaktu.addEventListener('change', async function () {
+        const isChecked = this.checked;
+        const airToggle = pompaAirWaktu;
+        const pengadukToggle = pengadukWaktu;
+
+        const pompaNutrisiOption = this.closest('.pump-option');
+        const pompaAirOption = airToggle.closest('.pump-option');
+        const pengadukOption = pengadukToggle.closest('.pump-option');
+
+        if (isChecked) {
+            airToggle.checked = false;
+            pengadukToggle.checked = false;
+            pompaNutrisiOption?.classList.add('active');
+            pompaNutrisiOption?.classList.remove('inactive');
+            pompaAirOption?.classList.remove('active');
+            pompaAirOption?.classList.add('inactive');
+            pengadukOption?.classList.remove('active');
+            pengadukOption?.classList.add('inactive');
+        } else {
+            pompaNutrisiOption?.classList.remove('active', 'inactive');
+            pompaAirOption?.classList.remove('inactive');
+            pengadukOption?.classList.remove('inactive');
+        }
+
+        try {
+            await update(ref(database, 'kontrol'), {
+                'pompa_waktu/pompa_nutrisi': isChecked,
+                ...(isChecked ? { 'pompa_waktu/pompa_air': false, 'pompa_waktu/pengaduk': false } : {})
+            });
+        } catch (error) {
+            console.error('Error updating pump state:', error);
+            // Revert toggle state on error
+            this.checked = !isChecked;
+            showNotification('Gagal menyimpan pilihan pompa', 'error');
+        }
+    });
+
+    pengadukWaktu.addEventListener('change', async function () {
+        const isChecked = this.checked;
+        const airToggle = pompaAirWaktu;
+        const nutrisiToggle = pompaNutrisiWaktu;
+
+        const pengadukOption = this.closest('.pump-option');
+        const pompaAirOption = airToggle.closest('.pump-option');
+        const pompaNutrisiOption = nutrisiToggle.closest('.pump-option');
+
+        if (isChecked) {
+            airToggle.checked = false;
+            nutrisiToggle.checked = false;
+            pengadukOption?.classList.add('active');
+            pengadukOption?.classList.remove('inactive');
+            pompaAirOption?.classList.remove('active');
+            pompaAirOption?.classList.add('inactive');
+            pompaNutrisiOption?.classList.remove('active');
+            pompaNutrisiOption?.classList.add('inactive');
+        } else {
+            pengadukOption?.classList.remove('active', 'inactive');
+            pompaAirOption?.classList.remove('inactive');
+            pompaNutrisiOption?.classList.remove('inactive');
+        }
+
+        try {
+            await update(ref(database, 'kontrol'), {
+                'pompa_waktu/pengaduk': isChecked,
+                ...(isChecked ? { 'pompa_waktu/pompa_air': false, 'pompa_waktu/pompa_nutrisi': false } : {})
+            });
+        } catch (error) {
+            console.error('Error updating pump state:', error);
+            this.checked = !isChecked;
+            showNotification('Gagal menyimpan pilihan pompa', 'error');
+        }
+    });
 }
 
 // Load schedules from Firebase
@@ -291,9 +468,13 @@ window.openScheduleModal = function(scheduleId = null) {
         // Uncheck all pots
         document.querySelectorAll('.schedule-pot-checkbox').forEach(cb => cb.checked = false);
         
-        // Reset pump type to air
-        const airRadio = document.querySelector('input[name="pumpType"][value="air"]');
-        if (airRadio) airRadio.checked = true;
+        // Reset pump type (prefer global pump toggle if set)
+        const preferPengaduk = pumpWaktuState.pengaduk === true;
+        const preferNutrisi = pumpWaktuState.pompa_nutrisi === true;
+        const preferAir = pumpWaktuState.pompa_air === true;
+        const defaultPump = preferPengaduk ? 'pengaduk' : (preferNutrisi ? 'nutrisi' : (preferAir ? 'air' : 'air'));
+        const defaultRadio = document.querySelector(`input[name="pumpType"][value="${defaultPump}"]`);
+        if (defaultRadio) defaultRadio.checked = true;
     }
     
     modal.style.display = 'flex';

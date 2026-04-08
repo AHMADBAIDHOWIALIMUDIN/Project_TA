@@ -121,6 +121,7 @@ window.toggleMainMode = function() {
     // Get pump toggles
     const pompaAir = document.getElementById('pompaAir');
     const pompaNutrisi = document.getElementById('pompaNutrisi');
+    const pengadukOtomatis = document.getElementById('pengadukOtomatis');
     
     if (mainModeActive) {
         mainToggle.classList.add('active');
@@ -137,6 +138,7 @@ window.toggleMainMode = function() {
         // Enable pump selection
         pompaAir.disabled = false;
         pompaNutrisi.disabled = false;
+        if (pengadukOtomatis) pengadukOtomatis.disabled = false;
         
         showNotification('Mode Otomatis diaktifkan', 'success');
     } else {
@@ -154,6 +156,7 @@ window.toggleMainMode = function() {
         // Disable pump selection
         pompaAir.disabled = true;
         pompaNutrisi.disabled = true;
+        if (pengadukOtomatis) pengadukOtomatis.disabled = true;
         
         showNotification('Mode Otomatis dinonaktifkan', 'info');
     }
@@ -188,6 +191,7 @@ function loadControllerData() {
             // Get pump toggles
             const pompaAir = document.getElementById('pompaAir');
             const pompaNutrisi = document.getElementById('pompaNutrisi');
+            const pengadukOtomatis = document.getElementById('pengadukOtomatis');
             
             // Update mode status
             if (data.otomatis !== undefined) {
@@ -213,6 +217,7 @@ function loadControllerData() {
                     // Enable pump selection
                     pompaAir.disabled = false;
                     pompaNutrisi.disabled = false;
+                    if (pengadukOtomatis) pengadukOtomatis.disabled = false;
                 } else {
                     mainToggle.classList.remove('active');
                     statusIndicator.classList.remove('active');
@@ -228,6 +233,7 @@ function loadControllerData() {
                     // Disable pump selection
                     pompaAir.disabled = true;
                     pompaNutrisi.disabled = true;
+                    if (pengadukOtomatis) pengadukOtomatis.disabled = true;
                 }
             }
             
@@ -245,24 +251,37 @@ function loadControllerData() {
             if (data.pompa_otomatis !== undefined) {
                 const pompaAirOption = pompaAir.closest('.pump-option');
                 const pompaNutrisiOption = pompaNutrisi.closest('.pump-option');
+                const pengadukOption = pengadukOtomatis ? pengadukOtomatis.closest('.pump-option') : null;
                 
                 // Reset classes first
                 pompaAirOption.classList.remove('active', 'inactive');
                 pompaNutrisiOption.classList.remove('active', 'inactive');
+                pengadukOption?.classList.remove('active', 'inactive');
                 
                 if (data.pompa_otomatis.pompa_air !== undefined) {
                     pompaAir.checked = data.pompa_otomatis.pompa_air;
-                    if (data.pompa_otomatis.pompa_air) {
-                        pompaAirOption.classList.add('active');
-                        pompaNutrisiOption.classList.add('inactive');
-                    }
                 }
                 if (data.pompa_otomatis.pompa_nutrisi !== undefined) {
                     pompaNutrisi.checked = data.pompa_otomatis.pompa_nutrisi;
-                    if (data.pompa_otomatis.pompa_nutrisi) {
-                        pompaNutrisiOption.classList.add('active');
-                        pompaAirOption.classList.add('inactive');
-                    }
+                }
+
+                if (pengadukOtomatis && data.pompa_otomatis.pengaduk !== undefined) {
+                    pengadukOtomatis.checked = data.pompa_otomatis.pengaduk;
+                }
+
+                // Apply active/inactive styling (priority: pengaduk > nutrisi > air)
+                if (pengadukOtomatis?.checked) {
+                    pengadukOption?.classList.add('active');
+                    pompaAirOption.classList.add('inactive');
+                    pompaNutrisiOption.classList.add('inactive');
+                } else if (pompaNutrisi.checked) {
+                    pompaNutrisiOption.classList.add('active');
+                    pompaAirOption.classList.add('inactive');
+                    pengadukOption?.classList.add('inactive');
+                } else if (pompaAir.checked) {
+                    pompaAirOption.classList.add('active');
+                    pompaNutrisiOption.classList.add('inactive');
+                    pengadukOption?.classList.add('inactive');
                 }
             }
             
@@ -438,26 +457,33 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('pompaAir').addEventListener('change', function() {
         const isChecked = this.checked;
         const pompaNutrisi = document.getElementById('pompaNutrisi');
+        const pengadukOtomatis = document.getElementById('pengadukOtomatis');
         const pompaAirOption = this.closest('.pump-option');
         const pompaNutrisiOption = pompaNutrisi.closest('.pump-option');
+        const pengadukOption = pengadukOtomatis ? pengadukOtomatis.closest('.pump-option') : null;
         
         // If pompa air is checked, uncheck pompa nutrisi
         if (isChecked) {
             pompaNutrisi.checked = false;
+            if (pengadukOtomatis) pengadukOtomatis.checked = false;
             pompaAirOption.classList.add('active');
             pompaAirOption.classList.remove('inactive');
             pompaNutrisiOption.classList.remove('active');
             pompaNutrisiOption.classList.add('inactive');
+            pengadukOption?.classList.remove('active');
+            pengadukOption?.classList.add('inactive');
         } else {
             pompaAirOption.classList.remove('active');
             pompaAirOption.classList.remove('inactive');
             pompaNutrisiOption.classList.remove('inactive');
+            pengadukOption?.classList.remove('inactive');
         }
         
         // Save to Firebase
         const updates = {
             'pompa_otomatis/pompa_air': isChecked,
-            'pompa_otomatis/pompa_nutrisi': false
+            'pompa_otomatis/pompa_nutrisi': false,
+            'pompa_otomatis/pengaduk': false
         };
         
         update(ref(database, 'kontrol'), updates).then(() => {
@@ -478,26 +504,33 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('pompaNutrisi').addEventListener('change', function() {
         const isChecked = this.checked;
         const pompaAir = document.getElementById('pompaAir');
+        const pengadukOtomatis = document.getElementById('pengadukOtomatis');
         const pompaNutrisiOption = this.closest('.pump-option');
         const pompaAirOption = pompaAir.closest('.pump-option');
+        const pengadukOption = pengadukOtomatis ? pengadukOtomatis.closest('.pump-option') : null;
         
         // If pompa nutrisi is checked, uncheck pompa air
         if (isChecked) {
             pompaAir.checked = false;
+            if (pengadukOtomatis) pengadukOtomatis.checked = false;
             pompaNutrisiOption.classList.add('active');
             pompaNutrisiOption.classList.remove('inactive');
             pompaAirOption.classList.remove('active');
             pompaAirOption.classList.add('inactive');
+            pengadukOption?.classList.remove('active');
+            pengadukOption?.classList.add('inactive');
         } else {
             pompaNutrisiOption.classList.remove('active');
             pompaNutrisiOption.classList.remove('inactive');
             pompaAirOption.classList.remove('inactive');
+            pengadukOption?.classList.remove('inactive');
         }
         
         // Save to Firebase
         const updates = {
             'pompa_otomatis/pompa_air': false,
-            'pompa_otomatis/pompa_nutrisi': isChecked
+            'pompa_otomatis/pompa_nutrisi': isChecked,
+            'pompa_otomatis/pengaduk': false
         };
         
         update(ref(database, 'kontrol'), updates).then(() => {
@@ -513,4 +546,55 @@ window.addEventListener('DOMContentLoaded', () => {
             this.checked = !isChecked;
         });
     });
+
+    // Pengaduk toggle event listener
+    const pengadukToggle = document.getElementById('pengadukOtomatis');
+    if (pengadukToggle) {
+        pengadukToggle.addEventListener('change', function() {
+            const isChecked = this.checked;
+            const pompaAir = document.getElementById('pompaAir');
+            const pompaNutrisi = document.getElementById('pompaNutrisi');
+
+            const pengadukOption = this.closest('.pump-option');
+            const pompaAirOption = pompaAir.closest('.pump-option');
+            const pompaNutrisiOption = pompaNutrisi.closest('.pump-option');
+
+            if (isChecked) {
+                pompaAir.checked = false;
+                pompaNutrisi.checked = false;
+
+                pengadukOption.classList.add('active');
+                pengadukOption.classList.remove('inactive');
+
+                pompaAirOption.classList.remove('active');
+                pompaAirOption.classList.add('inactive');
+
+                pompaNutrisiOption.classList.remove('active');
+                pompaNutrisiOption.classList.add('inactive');
+            } else {
+                pengadukOption.classList.remove('active');
+                pengadukOption.classList.remove('inactive');
+                pompaAirOption.classList.remove('inactive');
+                pompaNutrisiOption.classList.remove('inactive');
+            }
+
+            const updates = {
+                'pompa_otomatis/pompa_air': false,
+                'pompa_otomatis/pompa_nutrisi': false,
+                'pompa_otomatis/pengaduk': isChecked
+            };
+
+            update(ref(database, 'kontrol'), updates).then(() => {
+                if (isChecked) {
+                    showNotification('Pengaduk diaktifkan untuk mode otomatis', 'success');
+                } else {
+                    showNotification('Pengaduk dinonaktifkan untuk mode otomatis', 'info');
+                }
+            }).catch((error) => {
+                console.error('Error updating Firebase:', error);
+                showNotification('Gagal menyimpan ke server', 'error');
+                this.checked = !isChecked;
+            });
+        });
+    }
 });

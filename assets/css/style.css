@@ -776,19 +776,22 @@ body {
 
 /* Main Content Area */
 .main-wrapper {
-    flex: 1;
+    flex: 0 0 auto;
     margin-left: 280px;
     transition: all 0.3s ease;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    width: 100%;
-    max-width: 100%;
+    width: calc(100% - 280px);
+    max-width: calc(100% - 280px);
     overflow-x: hidden;
+    min-width: 0;
 }
 
 .sidebar.collapsed + .main-wrapper {
     margin-left: 80px;
+    width: calc(100% - 80px);
+    max-width: calc(100% - 80px);
 }
 
 /* Top Header */
@@ -1199,6 +1202,15 @@ body {
     font-size: 24px;
 }
 
+.actuator-mixer .actuator-header {
+    color: var(--accent-primary);
+}
+
+.actuator-mixer .actuator-header i {
+    color: var(--accent-primary);
+    font-size: 24px;
+}
+
 .actuator-content {
     display: flex;
     flex-direction: column;
@@ -1364,10 +1376,33 @@ body {
 /* Table */
 .table-container {
     overflow-x: auto;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
+}
+
+/* Scrollbar styling untuk table container */
+.table-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: #10b981;
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: #059669;
 }
 
 .user-table {
     width: 100%;
+    min-width: 600px;
     border-collapse: collapse;
 }
 
@@ -1383,6 +1418,7 @@ body {
     color: var(--text-primary);
     border-bottom: 2px solid var(--border-color);
     transition: all 0.3s ease;
+    white-space: nowrap;
 }
 
 .user-table td {
@@ -1390,6 +1426,7 @@ body {
     border-bottom: 1px solid var(--border-color);
     color: var(--text-primary);
     transition: all 0.3s ease;
+    white-space: nowrap;
 }
 
 .user-table tbody tr:hover {
@@ -2010,6 +2047,21 @@ input:checked + .slider:before {
     
     .card-body {
         padding: 20px;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .user-table {
+        min-width: 500px;
+    }
+    
+    .user-table th,
+    .user-table td {
+        padding: 10px 8px;
+        font-size: 13px;
     }
 }
 
@@ -3200,6 +3252,7 @@ input:checked + .slider:before {
     align-items: flex-end;
     flex-wrap: wrap;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    max-width: 100%;
 }
 
 .filter-group {
@@ -3297,6 +3350,28 @@ input:checked + .slider:before {
     padding: 25px;
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow-x: auto;
+    max-width: 100%;
+    position: relative;
+}
+
+/* Scrollbar styling untuk table container */
+.history-table-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+.history-table-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.history-table-container::-webkit-scrollbar-thumb {
+    background: #10b981;
+    border-radius: 4px;
+}
+
+.history-table-container::-webkit-scrollbar-thumb:hover {
+    background: #059669;
 }
 
 .table-header-controls {
@@ -3350,6 +3425,7 @@ input:checked + .slider:before {
 
 .history-table {
     width: 100%;
+    min-width: 800px;
     border-collapse: collapse;
 }
 
@@ -3363,6 +3439,7 @@ input:checked + .slider:before {
     text-align: left;
     font-weight: 600;
     font-size: 14px;
+    white-space: nowrap;
 }
 
 .history-table tbody tr {
@@ -3378,6 +3455,7 @@ input:checked + .slider:before {
     padding: 15px;
     font-size: 14px;
     color: #374151;
+    white-space: nowrap;
 }
 
 .status-badge {
@@ -3515,6 +3593,22 @@ input:checked + .slider:before {
     
     .search-input {
         width: 100%;
+    }
+    
+    .history-table-container {
+        padding: 15px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .history-table {
+        min-width: 700px;
+    }
+    
+    .history-table th,
+    .history-table td {
+        padding: 10px 8px;
+        font-size: 13px;
     }
     
     .pagination-container {

@@ -39,13 +39,13 @@ function showNotification(message, type = 'success') {
 onAuthStateChanged(auth, (user) => {
     if (user) {
         document.getElementById('dashboardPage').hidden = false;
-        document.getElementById('loginMessage').hidden = true;
+        // document.getElementById('loginMessage').hidden = true;
         document.getElementById('userEmail').textContent = user.email;
         window.scrollTo(0, 0);
         initializeController();
     } else {
         document.getElementById('dashboardPage').hidden = true;
-        document.getElementById('loginMessage').hidden = false;
+        // document.getElementById('loginMessage').hidden = false;
         setTimeout(() => {
             window.location.href = '../index.html';
         }, 2000);
