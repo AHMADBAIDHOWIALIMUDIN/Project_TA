@@ -23,11 +23,6 @@ const database = getDatabase(app);
 
 let schedules = [];
 let isPageLoaded = false;
-let pumpWaktuState = {
-    pompa_air: false,
-    pompa_nutrisi: false,
-    pengaduk: false
-};
 
 const MODE_WAKTU_BASE_PATH = 'kontrol_1';
 
@@ -162,9 +157,6 @@ function initializeMode() {
         const statusIndicator = document.getElementById('statusIndicator');
         const statusText = document.getElementById('statusText');
         const btnAddSchedule = document.getElementById('btnAddSchedule');
-        const pompaAirWaktu = document.getElementById('pompaAirWaktu');
-        const pompaNutrisiWaktu = document.getElementById('pompaNutrisiWaktu');
-        const pengadukWaktu = document.getElementById('pengadukWaktu');
         
         if (mainToggle) {
             if (isActive) {
@@ -179,30 +171,13 @@ function initializeMode() {
                 statusIndicator.classList.add('active');
                 statusText.textContent = 'Aktif';
                 if (btnAddSchedule) btnAddSchedule.disabled = false;
-                if (pompaAirWaktu) pompaAirWaktu.disabled = false;
-                if (pompaNutrisiWaktu) pompaNutrisiWaktu.disabled = false;
-                if (pengadukWaktu) pengadukWaktu.disabled = false;
             } else {
                 statusIndicator.classList.remove('active');
                 statusText.textContent = 'Tidak Aktif';
                 if (btnAddSchedule) btnAddSchedule.disabled = true;
-                if (pompaAirWaktu) pompaAirWaktu.disabled = true;
-                if (pompaNutrisiWaktu) pompaNutrisiWaktu.disabled = true;
-                if (pengadukWaktu) pengadukWaktu.disabled = true;
             }
         }
     });
-
-    // Initialize pump toggle display from local default state.
-    const pompaAirWaktu = document.getElementById('pompaAirWaktu');
-    const pompaNutrisiWaktu = document.getElementById('pompaNutrisiWaktu');
-    const pengadukWaktu = document.getElementById('pengadukWaktu');
-
-    if (pompaAirWaktu && pompaNutrisiWaktu && pengadukWaktu) {
-        pompaAirWaktu.checked = pumpWaktuState.pompa_air;
-        pompaNutrisiWaktu.checked = pumpWaktuState.pompa_nutrisi;
-        pengadukWaktu.checked = pumpWaktuState.pengaduk;
-    }
     
     // Load schedules from Firebase
     loadSchedulesFromFirebase();
@@ -211,129 +186,6 @@ function initializeMode() {
     setupAddScheduleButton();
     
     isPageLoaded = true;
-
-    // Setup pump toggles
-    setupPumpToggles();
-}
-
-function setupPumpToggles() {
-    const pompaAirWaktu = document.getElementById('pompaAirWaktu');
-    const pompaNutrisiWaktu = document.getElementById('pompaNutrisiWaktu');
-    const pengadukWaktu = document.getElementById('pengadukWaktu');
-    if (!pompaAirWaktu || !pompaNutrisiWaktu || !pengadukWaktu) return;
-
-    pompaAirWaktu.addEventListener('change', async function () {
-        const isChecked = this.checked;
-        const nutrisiToggle = pompaNutrisiWaktu;
-        const pengadukToggle = pengadukWaktu;
-
-        const pompaAirOption = this.closest('.pump-option');
-        const pompaNutrisiOption = nutrisiToggle.closest('.pump-option');
-        const pengadukOption = pengadukToggle.closest('.pump-option');
-
-        if (isChecked) {
-            nutrisiToggle.checked = false;
-            pengadukToggle.checked = false;
-            pompaAirOption?.classList.add('active');
-            pompaAirOption?.classList.remove('inactive');
-            pompaNutrisiOption?.classList.remove('active');
-            pompaNutrisiOption?.classList.add('inactive');
-            pengadukOption?.classList.remove('active');
-            pengadukOption?.classList.add('inactive');
-        } else {
-            pompaAirOption?.classList.remove('active', 'inactive');
-            pompaNutrisiOption?.classList.remove('inactive');
-            pengadukOption?.classList.remove('inactive');
-        }
-
-        try {
-            pumpWaktuState = {
-                pompa_air: isChecked,
-                pompa_nutrisi: isChecked ? false : pompaNutrisiWaktu.checked,
-                pengaduk: isChecked ? false : pengadukWaktu.checked
-            };
-        } catch (error) {
-            console.error('Error updating pump state:', error);
-            // Revert toggle state on error
-            this.checked = !isChecked;
-            showNotification('Gagal menyimpan pilihan pompa', 'error');
-        }
-    });
-
-    pompaNutrisiWaktu.addEventListener('change', async function () {
-        const isChecked = this.checked;
-        const airToggle = pompaAirWaktu;
-        const pengadukToggle = pengadukWaktu;
-
-        const pompaNutrisiOption = this.closest('.pump-option');
-        const pompaAirOption = airToggle.closest('.pump-option');
-        const pengadukOption = pengadukToggle.closest('.pump-option');
-
-        if (isChecked) {
-            airToggle.checked = false;
-            pengadukToggle.checked = false;
-            pompaNutrisiOption?.classList.add('active');
-            pompaNutrisiOption?.classList.remove('inactive');
-            pompaAirOption?.classList.remove('active');
-            pompaAirOption?.classList.add('inactive');
-            pengadukOption?.classList.remove('active');
-            pengadukOption?.classList.add('inactive');
-        } else {
-            pompaNutrisiOption?.classList.remove('active', 'inactive');
-            pompaAirOption?.classList.remove('inactive');
-            pengadukOption?.classList.remove('inactive');
-        }
-
-        try {
-            pumpWaktuState = {
-                pompa_air: isChecked ? false : pompaAirWaktu.checked,
-                pompa_nutrisi: isChecked,
-                pengaduk: isChecked ? false : pengadukWaktu.checked
-            };
-        } catch (error) {
-            console.error('Error updating pump state:', error);
-            // Revert toggle state on error
-            this.checked = !isChecked;
-            showNotification('Gagal menyimpan pilihan pompa', 'error');
-        }
-    });
-
-    pengadukWaktu.addEventListener('change', async function () {
-        const isChecked = this.checked;
-        const airToggle = pompaAirWaktu;
-        const nutrisiToggle = pompaNutrisiWaktu;
-
-        const pengadukOption = this.closest('.pump-option');
-        const pompaAirOption = airToggle.closest('.pump-option');
-        const pompaNutrisiOption = nutrisiToggle.closest('.pump-option');
-
-        if (isChecked) {
-            airToggle.checked = false;
-            nutrisiToggle.checked = false;
-            pengadukOption?.classList.add('active');
-            pengadukOption?.classList.remove('inactive');
-            pompaAirOption?.classList.remove('active');
-            pompaAirOption?.classList.add('inactive');
-            pompaNutrisiOption?.classList.remove('active');
-            pompaNutrisiOption?.classList.add('inactive');
-        } else {
-            pengadukOption?.classList.remove('active', 'inactive');
-            pompaAirOption?.classList.remove('inactive');
-            pompaNutrisiOption?.classList.remove('inactive');
-        }
-
-        try {
-            pumpWaktuState = {
-                pompa_air: isChecked ? false : pompaAirWaktu.checked,
-                pompa_nutrisi: isChecked ? false : pompaNutrisiWaktu.checked,
-                pengaduk: isChecked
-            };
-        } catch (error) {
-            console.error('Error updating pump state:', error);
-            this.checked = !isChecked;
-            showNotification('Gagal menyimpan pilihan pompa', 'error');
-        }
-    });
 }
 
 // Load schedules from Firebase
@@ -511,12 +363,8 @@ window.openScheduleModal = function(scheduleId = null) {
         // Uncheck all pots
         document.querySelectorAll('.schedule-pot-checkbox').forEach(cb => cb.checked = false);
         
-        // Reset pump type (prefer global pump toggle if set)
-        const preferPengaduk = pumpWaktuState.pengaduk === true;
-        const preferNutrisi = pumpWaktuState.pompa_nutrisi === true;
-        const preferAir = pumpWaktuState.pompa_air === true;
-        const defaultPump = preferPengaduk ? 'pengaduk' : (preferNutrisi ? 'nutrisi' : (preferAir ? 'air' : 'air'));
-        const defaultRadio = document.querySelector(`input[name="pumpType"][value="${defaultPump}"]`);
+        // Reset pump type default to air when creating new schedule.
+        const defaultRadio = document.querySelector('input[name="pumpType"][value="air"]');
         if (defaultRadio) defaultRadio.checked = true;
     }
     
