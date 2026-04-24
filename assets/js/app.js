@@ -61,21 +61,38 @@ const actuatorStates = {
     mixer: true
 };
 
+// Normalize toggle values from RTDB (supports boolean, number, and string forms)
+function normalizeToggleValue(value, fallback = false) {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value !== 0;
+
+    if (typeof value === 'string') {
+        const normalized = value.trim().toLowerCase();
+
+        if (['1', 'true', 'on', 'aktif', 'yes', 'y'].includes(normalized)) return true;
+        if (['0', 'false', 'off', 'nonaktif', 'no', 'n', ''].includes(normalized)) return false;
+
+        const numeric = Number(normalized);
+        if (!Number.isNaN(numeric)) return numeric !== 0;
+    }
+
+    return fallback;
+}
+
+function renderToggleUI(statusEl, indicatorEl, isOn) {
+    if (!statusEl || !indicatorEl) return;
+
+    statusEl.textContent = isOn ? 'ON' : 'OFF';
+    indicatorEl.classList.toggle('active', isOn);
+    indicatorEl.classList.toggle('inactive', !isOn);
+}
+
 // Toggle pot function
 window.togglePot = function(potNumber) {
     potStates[potNumber] = !potStates[potNumber];
     const statusEl = document.getElementById(`status${potNumber}`);
     const indicatorEl = document.getElementById(`indicator${potNumber}`);
-    
-    if (potStates[potNumber]) {
-        statusEl.textContent = 'ON';
-        indicatorEl.classList.add('active');
-        indicatorEl.classList.remove('inactive');
-    } else {
-        statusEl.textContent = 'OFF';
-        indicatorEl.classList.add('inactive');
-        indicatorEl.classList.remove('active');
-    }
+    renderToggleUI(statusEl, indicatorEl, potStates[potNumber]);
     
     // Update Firebase
     const mosvetKey = `mosvet_${potNumber}`;
@@ -270,10 +287,16 @@ window.toggleMixer = function() {
 
 // Check authentication
 onAuthStateChanged(auth, (user) => {
+    const dashboardPageEl = document.getElementById('dashboardPage');
+    const loginMessageEl = document.getElementById('loginMessage');
+
     if (user) {
-        document.getElementById('dashboardPage').hidden = false;
-        document.getElementById('loginMessage').hidden = true;
-        document.getElementById('userEmail').textContent = user.email;
+        if (dashboardPageEl) dashboardPageEl.hidden = false;
+        if (loginMessageEl) loginMessageEl.hidden = true;
+
+        const userEmailEl = document.getElementById('userEmail');
+        if (userEmailEl) userEmailEl.textContent = user.email;
+
         window.scrollTo(0, 0);
         
         // Load sensor readings from Firebase (RTDB)
@@ -282,8 +305,9 @@ onAuthStateChanged(auth, (user) => {
         // Load actuator states from Firebase
         loadActuatorStates();
     } else {
-        document.getElementById('dashboardPage').hidden = true;
-        document.getElementById('loginMessage').hidden = false;
+        if (dashboardPageEl) dashboardPageEl.hidden = true;
+        if (loginMessageEl) loginMessageEl.hidden = false;
+
         setTimeout(() => {
             window.location.href = '../index.html';
         }, 2000);
@@ -301,79 +325,39 @@ function loadActuatorStates() {
             for (let i = 1; i <= 5; i++) {
                 const mosvetKey = `mosvet_${i}`;
                 if (data[mosvetKey] !== undefined) {
-                    potStates[i] = data[mosvetKey];
+                    potStates[i] = normalizeToggleValue(data[mosvetKey], potStates[i]);
                     const statusEl = document.getElementById(`status${i}`);
                     const indicatorEl = document.getElementById(`indicator${i}`);
-                    
-                    if (statusEl && indicatorEl) {
-                        if (potStates[i]) {
-                            statusEl.textContent = 'ON';
-                            indicatorEl.classList.add('active');
-                            indicatorEl.classList.remove('inactive');
-                        } else {
-                            statusEl.textContent = 'OFF';
-                            indicatorEl.classList.add('inactive');
-                            indicatorEl.classList.remove('active');
-                        }
-                    }
+
+                    renderToggleUI(statusEl, indicatorEl, potStates[i]);
                 }
             }
             
             // Update water state (mosvet_6)
             if (data[ACTUATOR_KEYS.water] !== undefined) {
-                actuatorStates.water = data[ACTUATOR_KEYS.water];
+                actuatorStates.water = normalizeToggleValue(data[ACTUATOR_KEYS.water], actuatorStates.water);
                 const statusEl = document.getElementById('waterStatus');
                 const indicatorEl = document.getElementById('waterIndicator');
-                
-                if (statusEl && indicatorEl) {
-                    if (actuatorStates.water) {
-                        statusEl.textContent = 'ON';
-                        indicatorEl.classList.add('active');
-                        indicatorEl.classList.remove('inactive');
-                    } else {
-                        statusEl.textContent = 'OFF';
-                        indicatorEl.classList.add('inactive');
-                        indicatorEl.classList.remove('active');
-                    }
-                }
+
+                renderToggleUI(statusEl, indicatorEl, actuatorStates.water);
             }
             
             // Update fertilizer state (mosvet_7)
             if (data[ACTUATOR_KEYS.fertilizer] !== undefined) {
-                actuatorStates.fertilizer = data[ACTUATOR_KEYS.fertilizer];
+                actuatorStates.fertilizer = normalizeToggleValue(data[ACTUATOR_KEYS.fertilizer], actuatorStates.fertilizer);
                 const statusEl = document.getElementById('fertilizerStatus');
                 const indicatorEl = document.getElementById('fertilizerIndicator');
-                
-                if (statusEl && indicatorEl) {
-                    if (actuatorStates.fertilizer) {
-                        statusEl.textContent = 'ON';
-                        indicatorEl.classList.add('active');
-                        indicatorEl.classList.remove('inactive');
-                    } else {
-                        statusEl.textContent = 'OFF';
-                        indicatorEl.classList.add('inactive');
-                        indicatorEl.classList.remove('active');
-                    }
-                }
+
+                renderToggleUI(statusEl, indicatorEl, actuatorStates.fertilizer);
             }
 
             // Update mixer state (mosvet_8)
             if (data[ACTUATOR_KEYS.mixer] !== undefined) {
-                actuatorStates.mixer = data[ACTUATOR_KEYS.mixer];
+                actuatorStates.mixer = normalizeToggleValue(data[ACTUATOR_KEYS.mixer], actuatorStates.mixer);
                 const statusEl = document.getElementById('mixerStatus');
                 const indicatorEl = document.getElementById('mixerIndicator');
 
-                if (statusEl && indicatorEl) {
-                    if (actuatorStates.mixer) {
-                        statusEl.textContent = 'ON';
-                        indicatorEl.classList.add('active');
-                        indicatorEl.classList.remove('inactive');
-                    } else {
-                        statusEl.textContent = 'OFF';
-                        indicatorEl.classList.add('inactive');
-                        indicatorEl.classList.remove('active');
-                    }
-                }
+                renderToggleUI(statusEl, indicatorEl, actuatorStates.mixer);
             }
         } else {
             // Initialize default values
@@ -664,11 +648,14 @@ async function startSensorSubscription(forcedPath = null, attempt = 0) {
 }
 
 // Sign out function
-document.getElementById('signOutBtn').addEventListener('click', () => {
-    signOut(auth).then(() => {
-        console.log('User signed out');
-        window.location.href = '../index.html';
-    }).catch((error) => {
-        console.error(error);
+const signOutBtn = document.getElementById('signOutBtn');
+if (signOutBtn) {
+    signOutBtn.addEventListener('click', () => {
+        signOut(auth).then(() => {
+            console.log('User signed out');
+            window.location.href = '../index.html';
+        }).catch((error) => {
+            console.error(error);
+        });
     });
-});
+}
