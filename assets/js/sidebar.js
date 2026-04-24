@@ -69,17 +69,13 @@ function updateTime() {
     const now = new Date();
     let options;
 
-    if (window.innerWidth <= 480) {
-        options = {
-            hour: '2-digit',
-            minute: '2-digit'
-        };
-    } else if (window.innerWidth <= 768) {
+    if (window.innerWidth <= 768) {
         options = {
             day: '2-digit',
             month: 'short',
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
+            hour12: false
         };
     } else {
         options = {
@@ -88,7 +84,8 @@ function updateTime() {
             month: 'long',
             day: 'numeric',
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
+            hour12: false
         };
     }
 
