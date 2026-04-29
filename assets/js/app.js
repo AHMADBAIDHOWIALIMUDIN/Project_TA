@@ -40,8 +40,8 @@ const SENSOR_PATH_CANDIDATES = [
 ];
 
 const ACTUATOR_KEYS = {
-    water: 'mosvet_6',
-    fertilizer: 'mosvet_7',
+    water: 'mosvet_1',
+    fertilizer: 'mosvet_2',
     mixer: 'mosvet_8'
 };
 
@@ -94,18 +94,19 @@ window.togglePot = function(potNumber) {
     const indicatorEl = document.getElementById(`indicator${potNumber}`);
     renderToggleUI(statusEl, indicatorEl, potStates[potNumber]);
     
-    // Update Firebase
-    const mosvetKey = `mosvet_${potNumber}`;
+    // Update Firebase - Pot 1-5 maps to mosvet_3-7
+    const mosvetNumber = potNumber + 2;
+    const mosvetKey = `mosvet_${mosvetNumber}`;
     update(aktuatorRef, {
         [mosvetKey]: potStates[potNumber]
     }).then(() => {
-        console.log(`POT ${potNumber} updated to ${potStates[potNumber]}`);
+        console.log(`POT ${potNumber} updated to ${potStates[potNumber]} (${mosvetKey})`);
     }).catch((error) => {
         console.error('Error updating Firebase:', error);
     });
 };
 
-// Toggle water actuator (mosvet_6)
+// Toggle water actuator (mosvet_1 - Pompa air)
 window.toggleWater = function() {
     const newWaterState = !actuatorStates.water;
     
@@ -168,7 +169,7 @@ window.toggleWater = function() {
     }
 };
 
-// Toggle fertilizer actuator (mosvet_7)
+// Toggle fertilizer actuator (mosvet_2 - Pupuk)
 window.toggleFertilizer = function() {
     const newFertilizerState = !actuatorStates.fertilizer;
     
@@ -231,7 +232,7 @@ window.toggleFertilizer = function() {
     }
 };
 
-// Toggle mixer actuator (mosvet_8)
+// Toggle mixer actuator (mosvet_8 - Pompa pengaduk)
 window.toggleMixer = function() {
     const newMixerState = !actuatorStates.mixer;
 
@@ -321,9 +322,10 @@ function loadActuatorStates() {
             const data = snapshot.val();
             console.log('Actuator data loaded:', data);
             
-            // Update pot states (mosvet_1 to mosvet_5)
+            // Update pot states (Pot 1-5 maps to mosvet_3-7)
             for (let i = 1; i <= 5; i++) {
-                const mosvetKey = `mosvet_${i}`;
+                const mosvetNumber = i + 2;
+                const mosvetKey = `mosvet_${mosvetNumber}`;
                 if (data[mosvetKey] !== undefined) {
                     potStates[i] = normalizeToggleValue(data[mosvetKey], potStates[i]);
                     const statusEl = document.getElementById(`status${i}`);
@@ -333,7 +335,7 @@ function loadActuatorStates() {
                 }
             }
             
-            // Update water state (mosvet_6)
+            // Update water state (mosvet_1)
             if (data[ACTUATOR_KEYS.water] !== undefined) {
                 actuatorStates.water = normalizeToggleValue(data[ACTUATOR_KEYS.water], actuatorStates.water);
                 const statusEl = document.getElementById('waterStatus');
@@ -342,7 +344,7 @@ function loadActuatorStates() {
                 renderToggleUI(statusEl, indicatorEl, actuatorStates.water);
             }
             
-            // Update fertilizer state (mosvet_7)
+            // Update fertilizer state (mosvet_2)
             if (data[ACTUATOR_KEYS.fertilizer] !== undefined) {
                 actuatorStates.fertilizer = normalizeToggleValue(data[ACTUATOR_KEYS.fertilizer], actuatorStates.fertilizer);
                 const statusEl = document.getElementById('fertilizerStatus');
@@ -369,14 +371,14 @@ function loadActuatorStates() {
 // Initialize default actuator states
 function initializeDefaultActuatorStates() {
     const defaultData = {
-        mosvet_1: true,
-        mosvet_2: true,
-        mosvet_3: true,
-        mosvet_4: true,
-        mosvet_5: true,
-        [ACTUATOR_KEYS.water]: true,
-        [ACTUATOR_KEYS.fertilizer]: true,
-        [ACTUATOR_KEYS.mixer]: true
+        mosvet_1: true,  // Pompa air
+        mosvet_2: true,  // Pupuk
+        mosvet_3: true,  // Soil 1
+        mosvet_4: true,  // Soil 2
+        mosvet_5: true,  // Soil 3
+        mosvet_6: true,  // Soil 4
+        mosvet_7: true,  // Soil 5
+        mosvet_8: true   // Pompa pengaduk
     };
     
     set(aktuatorRef, defaultData)
