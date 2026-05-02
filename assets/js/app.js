@@ -110,11 +110,11 @@ window.togglePot = function(potNumber) {
 window.toggleWater = function() {
     const newWaterState = !actuatorStates.water;
     
-    // If turning water ON, turn fertilizer OFF
+    // If turning water ON, turn fertilizer OFF (but mixer can stay ON)
     if (newWaterState) {
         actuatorStates.water = true;
         actuatorStates.fertilizer = false;
-        actuatorStates.mixer = false;
+        // Keep mixer state as is
         
         // Update water UI
         const waterStatusEl = document.getElementById('waterStatus');
@@ -129,28 +129,18 @@ window.toggleWater = function() {
         fertilizerStatusEl.textContent = 'OFF';
         fertilizerIndicatorEl.classList.add('inactive');
         fertilizerIndicatorEl.classList.remove('active');
-
-        // Update mixer UI to OFF
-        const mixerStatusEl = document.getElementById('mixerStatus');
-        const mixerIndicatorEl = document.getElementById('mixerIndicator');
-        if (mixerStatusEl && mixerIndicatorEl) {
-            mixerStatusEl.textContent = 'OFF';
-            mixerIndicatorEl.classList.add('inactive');
-            mixerIndicatorEl.classList.remove('active');
-        }
         
-        // Update Firebase for both
+        // Update Firebase
         update(aktuatorRef, {
             [ACTUATOR_KEYS.water]: true,
-            [ACTUATOR_KEYS.fertilizer]: false,
-            [ACTUATOR_KEYS.mixer]: false
+            [ACTUATOR_KEYS.fertilizer]: false
         }).then(() => {
             console.log('Water ON, Fertilizer OFF');
         }).catch((error) => {
             console.error('Error updating Firebase:', error);
         });
     } else {
-        // Turning water OFF (fertilizer stays OFF)
+        // Turning water OFF
         actuatorStates.water = false;
         
         const waterStatusEl = document.getElementById('waterStatus');
@@ -173,11 +163,11 @@ window.toggleWater = function() {
 window.toggleFertilizer = function() {
     const newFertilizerState = !actuatorStates.fertilizer;
     
-    // If turning fertilizer ON, turn water OFF
+    // If turning fertilizer ON, turn water OFF (but mixer can stay ON)
     if (newFertilizerState) {
         actuatorStates.fertilizer = true;
         actuatorStates.water = false;
-        actuatorStates.mixer = false;
+        // Keep mixer state as is
         
         // Update fertilizer UI
         const fertilizerStatusEl = document.getElementById('fertilizerStatus');
@@ -192,28 +182,18 @@ window.toggleFertilizer = function() {
         waterStatusEl.textContent = 'OFF';
         waterIndicatorEl.classList.add('inactive');
         waterIndicatorEl.classList.remove('active');
-
-        // Update mixer UI to OFF
-        const mixerStatusEl = document.getElementById('mixerStatus');
-        const mixerIndicatorEl = document.getElementById('mixerIndicator');
-        if (mixerStatusEl && mixerIndicatorEl) {
-            mixerStatusEl.textContent = 'OFF';
-            mixerIndicatorEl.classList.add('inactive');
-            mixerIndicatorEl.classList.remove('active');
-        }
         
-        // Update Firebase for both
+        // Update Firebase
         update(aktuatorRef, {
             [ACTUATOR_KEYS.water]: false,
-            [ACTUATOR_KEYS.fertilizer]: true,
-            [ACTUATOR_KEYS.mixer]: false
+            [ACTUATOR_KEYS.fertilizer]: true
         }).then(() => {
             console.log('Fertilizer ON, Water OFF');
         }).catch((error) => {
             console.error('Error updating Firebase:', error);
         });
     } else {
-        // Turning fertilizer OFF (water stays OFF)
+        // Turning fertilizer OFF
         actuatorStates.fertilizer = false;
         
         const fertilizerStatusEl = document.getElementById('fertilizerStatus');
@@ -238,35 +218,23 @@ window.toggleMixer = function() {
 
     const mixerStatusEl = document.getElementById('mixerStatus');
     const mixerIndicatorEl = document.getElementById('mixerIndicator');
-    const waterStatusEl = document.getElementById('waterStatus');
-    const waterIndicatorEl = document.getElementById('waterIndicator');
-    const fertilizerStatusEl = document.getElementById('fertilizerStatus');
-    const fertilizerIndicatorEl = document.getElementById('fertilizerIndicator');
 
-    if (!mixerStatusEl || !mixerIndicatorEl || !waterStatusEl || !waterIndicatorEl || !fertilizerStatusEl || !fertilizerIndicatorEl) {
+    if (!mixerStatusEl || !mixerIndicatorEl) {
         return;
     }
 
     if (newMixerState) {
         actuatorStates.mixer = true;
-        actuatorStates.water = false;
-        actuatorStates.fertilizer = false;
+        // Keep water and fertilizer states as is
+        
         mixerStatusEl.textContent = 'ON';
         mixerIndicatorEl.classList.add('active');
         mixerIndicatorEl.classList.remove('inactive');
-        waterStatusEl.textContent = 'OFF';
-        waterIndicatorEl.classList.add('inactive');
-        waterIndicatorEl.classList.remove('active');
-        fertilizerStatusEl.textContent = 'OFF';
-        fertilizerIndicatorEl.classList.add('inactive');
-        fertilizerIndicatorEl.classList.remove('active');
 
         update(aktuatorRef, {
-            [ACTUATOR_KEYS.water]: false,
-            [ACTUATOR_KEYS.fertilizer]: false,
             [ACTUATOR_KEYS.mixer]: true
         }).then(() => {
-            console.log('Mixer ON, Water OFF, Fertilizer OFF');
+            console.log('Mixer ON');
         }).catch((error) => {
             console.error('Error updating Firebase:', error);
         });
@@ -421,12 +389,14 @@ function updateSensorUI(data) {
         data.sunLight,
         data.light,
         data.cahaya,
+        data.ldr_percent,
+        data.ldr_percent,
         data.ldr,
         data.lux
     );
     if (light !== null) {
         const el = document.getElementById('sunLight');
-        if (el) el.textContent = Math.round(light);
+        if (el) el.textContent = Math.round(light * 100) / 100 + '%';
 
         const statusEl = document.querySelector('.sensor-light .status');
         if (statusEl) {
