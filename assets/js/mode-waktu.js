@@ -42,15 +42,45 @@ function getNextScheduleId() {
     return `jadwal_${nextIndex}`;
 }
 
-function normalizeScheduleFromMobile(id, data) {
-    const potAktif = data?.pot_aktif || {};
-    const pots = [];
+function getSelectedPotsFromFirebase(potAktif) {
+    const selected = [];
 
-    for (let i = 1; i <= 5; i++) {
-        if (potAktif[`pot_${i}`] === true || potAktif[`pot${i}`] === true) {
-            pots.push(`pot${i}`);
+    if (Array.isArray(potAktif)) {
+        potAktif.forEach((value) => {
+            const potNumber = Number(value);
+            if (Number.isFinite(potNumber) && potNumber >= 1 && potNumber <= 5) {
+                selected.push(`pot${potNumber}`);
+            }
+        });
+        return Array.from(new Set(selected));
+    }
+
+    if (potAktif && typeof potAktif === 'object') {
+        const hasNumericKeys = Object.keys(potAktif).some((key) => /^\d+$/.test(key));
+
+        if (hasNumericKeys) {
+            Object.values(potAktif).forEach((value) => {
+                const potNumber = Number(value);
+                if (Number.isFinite(potNumber) && potNumber >= 1 && potNumber <= 5) {
+                    selected.push(`pot${potNumber}`);
+                }
+            });
+
+            return Array.from(new Set(selected));
+        }
+
+        for (let i = 1; i <= 5; i++) {
+            if (potAktif[`pot_${i}`] === true || potAktif[`pot${i}`] === true) {
+                selected.push(`pot${i}`);
+            }
         }
     }
+
+    return selected;
+}
+
+function normalizeScheduleFromMobile(id, data) {
+    const pots = getSelectedPotsFromFirebase(data?.pot_aktif);
 
     let pumpType = 'air';
     if (data?.pompa_pengaduk) {
@@ -74,6 +104,11 @@ function normalizeScheduleFromMobile(id, data) {
 
 function toMobileScheduleData(scheduleData) {
     const selectedPots = Array.isArray(scheduleData.pots) ? scheduleData.pots : [];
+    const potAktifList = Array.from(new Set(
+        selectedPots
+            .map((pot) => Number(String(pot).replace('pot', '')))
+            .filter((potNumber) => Number.isFinite(potNumber) && potNumber >= 1 && potNumber <= 5)
+    ));
 
     return {
         aktif: true,
@@ -82,13 +117,7 @@ function toMobileScheduleData(scheduleData) {
         pompa_air: scheduleData.pumpType === 'air',
         pompa_pupuk: scheduleData.pumpType === 'nutrisi',
         pompa_pengaduk: scheduleData.pumpType === 'pengaduk',
-        pot_aktif: {
-            pot_1: selectedPots.includes('pot1'),
-            pot_2: selectedPots.includes('pot2'),
-            pot_3: selectedPots.includes('pot3'),
-            pot_4: selectedPots.includes('pot4'),
-            pot_5: selectedPots.includes('pot5')
-        }
+        pot_aktif: potAktifList
     };
 }
 
@@ -147,36 +176,54 @@ document.getElementById('signOutBtn')?.addEventListener('click', async () => {
     }
 });
 
+// Normalize boolean value from Firebase (handle string, number, boolean)
+function normalizeBooleanValue(value) {
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value !== 0;
+    if (typeof value === 'string') {
+        const lower = value.toLowerCase().trim();
+        return lower === 'true' || lower === '1' || lower === 'yes';
+    }
+    return false;
+}
+
+// Update toggle UI based on active state
+function updateToggleUI(isActive) {
+    const mainToggle = document.getElementById('mainToggle');
+    const statusIndicator = document.getElementById('statusIndicator');
+    const statusText = document.getElementById('statusText');
+    const btnAddSchedule = document.getElementById('btnAddSchedule');
+    
+    if (mainToggle) {
+        if (isActive) {
+            mainToggle.classList.add('active');
+        } else {
+            mainToggle.classList.remove('active');
+        }
+    }
+    
+    if (statusIndicator) {
+        if (isActive) {
+            statusIndicator.classList.add('active');
+            statusText.textContent = 'Aktif';
+            if (btnAddSchedule) btnAddSchedule.disabled = false;
+        } else {
+            statusIndicator.classList.remove('active');
+            statusText.textContent = 'Tidak Aktif';
+            if (btnAddSchedule) btnAddSchedule.disabled = true;
+        }
+    }
+}
+
 // Initialize mode
 function initializeMode() {
-    const statusRef = ref(database, `${MODE_WAKTU_BASE_PATH}/otomatis`);
+    // Listen to Mode Waktu status (field: waktu)
+    const statusRef = ref(database, `${MODE_WAKTU_BASE_PATH}/waktu`);
     
     onValue(statusRef, (snapshot) => {
-        const isActive = snapshot.val() === true || snapshot.val() === 1;
-        const mainToggle = document.getElementById('mainToggle');
-        const statusIndicator = document.getElementById('statusIndicator');
-        const statusText = document.getElementById('statusText');
-        const btnAddSchedule = document.getElementById('btnAddSchedule');
-        
-        if (mainToggle) {
-            if (isActive) {
-                mainToggle.classList.add('active');
-            } else {
-                mainToggle.classList.remove('active');
-            }
-        }
-        
-        if (statusIndicator) {
-            if (isActive) {
-                statusIndicator.classList.add('active');
-                statusText.textContent = 'Aktif';
-                if (btnAddSchedule) btnAddSchedule.disabled = false;
-            } else {
-                statusIndicator.classList.remove('active');
-                statusText.textContent = 'Tidak Aktif';
-                if (btnAddSchedule) btnAddSchedule.disabled = true;
-            }
-        }
+        const firebaseValue = snapshot.val();
+        const isActive = normalizeBooleanValue(firebaseValue);
+        updateToggleUI(isActive);
     });
     
     // Load schedules from Firebase
@@ -314,15 +361,26 @@ window.toggleMainMode = function() {
     if (!isPageLoaded) return;
     
     const mainToggle = document.getElementById('mainToggle');
-    const isActive = mainToggle.classList.contains('active');
-    const newStatus = !isActive;
+    const currentState = mainToggle.classList.contains('active');
+    const newState = !currentState;
     
+    // Optimistic UI update for better UX
+    updateToggleUI(newState);
+    
+    // Ketika Mode Waktu diaktifkan, matikan Mode Otomatis
+    // Ketika Mode Waktu dimatikan, Mode Otomatis tetap bisa digunakan
     update(ref(database, MODE_WAKTU_BASE_PATH), {
-        otomatis: newStatus
+        waktu: newState,
+        otomatis: newState ? false : undefined
     }).then(() => {
-        showNotification(newStatus ? 'Mode Waktu diaktifkan' : 'Mode Waktu dinonaktifkan', newStatus ? 'success' : 'warning');
+        showNotification(
+            newState ? 'Mode Waktu diaktifkan' : 'Mode Waktu dinonaktifkan', 
+            newState ? 'success' : 'warning'
+        );
     }).catch((error) => {
         console.error('Error updating mode:', error);
+        // Revert UI on error
+        updateToggleUI(currentState);
         showNotification('Gagal mengubah status mode', 'error');
     });
 };

@@ -512,8 +512,11 @@ window.toggleMainMode = function() {
     setMainModeVisual(mainModeActive);
     updateThresholdProfileUI();
 
+    // Ketika Mode Otomatis diaktifkan, matikan Mode Waktu
+    // Ketika Mode Otomatis dimatikan, Mode Waktu tetap bisa digunakan
     update(kontrolRef, {
         otomatis: nextState,
+        waktu: nextState ? false : undefined,
         [`${activeThresholdKey}/aktif`]: nextState,
         [`${activeThresholdKey}/smart_mode`]: nextState,
         threshold_aktif: activeThresholdKey
