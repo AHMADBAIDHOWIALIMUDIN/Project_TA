@@ -37,6 +37,33 @@ function clampNumber(value, min, max) {
     return Math.min(Math.max(parsed, min), max);
 }
 
+function normalizePotValue(value) {
+    if (typeof value === 'boolean') {
+        return value;
+    }
+
+    if (typeof value === 'number') {
+        return value !== 0;
+    }
+
+    if (typeof value === 'string') {
+        const normalized = value.trim().toLowerCase();
+        if (['1', 'true', 'on', 'aktif', 'yes', 'y'].includes(normalized)) {
+            return true;
+        }
+        if (['0', 'false', 'off', 'nonaktif', 'no', 'n', ''].includes(normalized)) {
+            return false;
+        }
+
+        const numeric = Number(normalized);
+        if (!Number.isNaN(numeric)) {
+            return numeric !== 0;
+        }
+    }
+
+    return false;
+}
+
 function escapeHtml(value) {
     return String(value)
         .replace(/&/g, '&amp;')
@@ -72,12 +99,37 @@ function resolveThresholdKey(value) {
 }
 
 function normalizePotAktif(potAktifSource = {}) {
+    if (Array.isArray(potAktifSource)) {
+        const normalized = { pot_1: false, pot_2: false, pot_3: false, pot_4: false, pot_5: false };
+        potAktifSource.forEach((value) => {
+            const potNumber = Number(value);
+            if (Number.isFinite(potNumber) && potNumber >= 1 && potNumber <= 5) {
+                normalized[`pot_${potNumber}`] = true;
+            }
+        });
+        return normalized;
+    }
+
+    if (potAktifSource && typeof potAktifSource === 'object') {
+        const numericKeys = Object.keys(potAktifSource).filter((key) => /^\d+$/.test(key));
+        if (numericKeys.length > 0) {
+            const normalized = { pot_1: false, pot_2: false, pot_3: false, pot_4: false, pot_5: false };
+            Object.values(potAktifSource).forEach((value) => {
+                const potNumber = Number(value);
+                if (Number.isFinite(potNumber) && potNumber >= 1 && potNumber <= 5) {
+                    normalized[`pot_${potNumber}`] = true;
+                }
+            });
+            return normalized;
+        }
+    }
+
     return {
-        pot_1: potAktifSource.pot_1 === true,
-        pot_2: potAktifSource.pot_2 === true,
-        pot_3: potAktifSource.pot_3 === true,
-        pot_4: potAktifSource.pot_4 === true,
-        pot_5: potAktifSource.pot_5 === true
+        pot_1: normalizePotValue(potAktifSource.pot_1 ?? potAktifSource.pot1),
+        pot_2: normalizePotValue(potAktifSource.pot_2 ?? potAktifSource.pot2),
+        pot_3: normalizePotValue(potAktifSource.pot_3 ?? potAktifSource.pot3),
+        pot_4: normalizePotValue(potAktifSource.pot_4 ?? potAktifSource.pot4),
+        pot_5: normalizePotValue(potAktifSource.pot_5 ?? potAktifSource.pot5)
     };
 }
 
@@ -353,19 +405,19 @@ function getThresholdPayloadFromForm() {
 
     const selectedPump = document.querySelector('input[name="thresholdPumpType"]:checked')?.value || 'air';
 
+    const potAktifList = Array.from(new Set(
+        selectedPotValues
+            .map((pot) => Number(String(pot).replace('pot', '')))
+            .filter((potNumber) => Number.isFinite(potNumber) && potNumber >= 1 && potNumber <= 5)
+    ));
+
     return {
         nama_tanaman: namaTanaman || getThresholdLabel(fallbackKey),
         aktif: mainModeActive,
         smart_mode: mainModeActive,
         batas_bawah: batasBawah,
         batas_atas: batasAtas,
-        pot_aktif: {
-            pot_1: selectedPotValues.includes('pot1'),
-            pot_2: selectedPotValues.includes('pot2'),
-            pot_3: selectedPotValues.includes('pot3'),
-            pot_4: selectedPotValues.includes('pot4'),
-            pot_5: selectedPotValues.includes('pot5')
-        },
+        pot_aktif: potAktifList,
         pompa_air: selectedPump === 'air',
         pompa_pupuk: selectedPump === 'nutrisi',
         pompa_pengaduk: selectedPump === 'pengaduk'
