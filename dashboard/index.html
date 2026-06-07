@@ -95,6 +95,13 @@
                     <p>Pemantauan sensor dan status sistem Smart Pot secara real-time</p>
                 </div>
 
+                <div class="waterflow-row">
+                    <div class="waterflow-badge" id="waterflowBadge">
+                        <span class="waterflow-dot" id="waterflowDot"></span>
+                        <span class="waterflow-text" id="waterflowText">AIR TERSEDIA</span>
+                    </div>
+                </div>
+
                 <!-- Sensor Cards -->
                 <div class="sensor-cards">
                     <div class="sensor-card sensor-temp">
@@ -105,6 +112,17 @@
                         <div class="sensor-label">SUHU DHT</div>
                         <div class="sensor-icon">
                             <i class="fas fa-thermometer-half"></i>
+                        </div>
+                    </div>
+
+                    <div class="sensor-card sensor-humidity">
+                        <div class="sensor-value">
+                            <span class="value" id="dhtHumidity">65</span>
+                            <span class="unit">%</span>
+                        </div>
+                        <div class="sensor-label">KELEMBAPAN UDARA</div>
+                        <div class="sensor-icon">
+                            <i class="fas fa-droplet"></i>
                         </div>
                     </div>
 

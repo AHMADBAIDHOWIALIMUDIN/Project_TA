@@ -367,6 +367,45 @@ function pickNumber(...candidates) {
     return null;
 }
 
+function parseWaterflowAvailability(value) {
+    if (value === null || value === undefined) return null;
+
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value > 0;
+
+    if (typeof value === 'string') {
+        const normalized = value.trim().toLowerCase();
+
+        if (['1', 'true', 'on', 'ada', 'available', 'air', 'yes', 'y'].includes(normalized)) return true;
+        if (['0', 'false', 'off', 'habis', 'empty', 'no', 'n', ''].includes(normalized)) return false;
+
+        const numeric = Number(normalized);
+        if (!Number.isNaN(numeric)) return numeric > 0;
+    }
+
+    return Boolean(value);
+}
+
+function updateWaterflowBadge(isAvailable) {
+    const badge = document.getElementById('waterflowBadge');
+    const dot = document.getElementById('waterflowDot');
+    const text = document.getElementById('waterflowText');
+
+    if (badge) {
+        badge.classList.toggle('has-water', isAvailable);
+        badge.classList.toggle('no-water', !isAvailable);
+    }
+
+    if (dot) {
+        dot.classList.toggle('active', isAvailable);
+        dot.classList.toggle('inactive', !isAvailable);
+    }
+
+    if (text) {
+        text.textContent = isAvailable ? 'AIR TERSEDIA' : 'AIR HABIS';
+    }
+}
+
 function updateSensorUI(data) {
     if (!data || typeof data !== 'object') return;
 
@@ -382,6 +421,27 @@ function updateSensorUI(data) {
     if (temperature !== null) {
         const el = document.getElementById('dhtTemp');
         if (el) el.textContent = Math.round(temperature * 10) / 10;
+    }
+
+    // Air humidity
+    const humidity = pickNumber(
+        data.dhtHumidity,
+        data.humidity,
+        data.kelembapan,
+        data.kelembapan_udara,
+        data.airHumidity,
+        data.air_humidity,
+        data.humid
+    );
+    if (humidity !== null) {
+        const el = document.getElementById('dhtHumidity');
+        if (el) el.textContent = Math.round(humidity * 10) / 10;
+    }
+
+    const waterflowRaw = data.water_flow ?? data.waterflow ?? data.waterFlow;
+    const waterflowAvailable = parseWaterflowAvailability(waterflowRaw);
+    if (waterflowAvailable !== null) {
+        updateWaterflowBadge(waterflowAvailable);
     }
 
     // Light
