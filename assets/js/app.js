@@ -446,21 +446,20 @@ function updateSensorUI(data) {
 
     // Light
     const light = pickNumber(
+        data.ldr,
         data.sunLight,
         data.light,
         data.cahaya,
         data.ldr_percent,
-        data.ldr_percent,
-        data.ldr,
         data.lux
     );
     if (light !== null) {
         const el = document.getElementById('sunLight');
-        if (el) el.textContent = Math.round(light * 100) / 100 + '%';
+        if (el) el.textContent = Math.round(light * 100) / 100;
 
         const statusEl = document.querySelector('.sensor-light .status');
         if (statusEl) {
-            const sunStatus = light < 30 ? 'Gelap' : light < 60 ? 'Sedang' : 'Panas';
+            const sunStatus = light < 250 ? 'Gelap' : light < 1000 ? 'Sedang' : light < 2000 ? 'Terang' : 'Sangat Terang';
             statusEl.textContent = sunStatus;
         }
     }
