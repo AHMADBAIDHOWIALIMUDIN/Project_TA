@@ -79,6 +79,16 @@ function normalizeToggleValue(value, fallback = false) {
     return fallback;
 }
 
+// Check if all pots are OFF
+function areAllPotsOff() {
+    return !potStates[1] && !potStates[2] && !potStates[3] && !potStates[4] && !potStates[5];
+}
+
+// Show notification/alert to user
+function showNotification(message) {
+    alert(message);
+}
+
 function renderToggleUI(statusEl, indicatorEl, isOn) {
     if (!statusEl || !indicatorEl) return;
 
@@ -109,6 +119,12 @@ window.togglePot = function(potNumber) {
 // Toggle water actuator (mosvet_1 - Pompa air)
 window.toggleWater = function() {
     const newWaterState = !actuatorStates.water;
+    
+    // Check if all pots are OFF and user is trying to turn water ON
+    if (newWaterState && areAllPotsOff()) {
+        showNotification('Semua pot dalam status OFF. Aktifkan minimal satu pot sebelum mengaktifkan pompa air.');
+        return;
+    }
     
     // If turning water ON, turn fertilizer OFF (but mixer can stay ON)
     if (newWaterState) {
@@ -162,6 +178,12 @@ window.toggleWater = function() {
 // Toggle fertilizer actuator (mosvet_2 - Pupuk)
 window.toggleFertilizer = function() {
     const newFertilizerState = !actuatorStates.fertilizer;
+    
+    // Check if all pots are OFF and user is trying to turn fertilizer ON
+    if (newFertilizerState && areAllPotsOff()) {
+        showNotification('Semua pot dalam status OFF. Aktifkan minimal satu pot sebelum mengaktifkan penyiraman pupuk.');
+        return;
+    }
     
     // If turning fertilizer ON, turn water OFF (but mixer can stay ON)
     if (newFertilizerState) {
@@ -220,6 +242,12 @@ window.toggleMixer = function() {
     const mixerIndicatorEl = document.getElementById('mixerIndicator');
 
     if (!mixerStatusEl || !mixerIndicatorEl) {
+        return;
+    }
+
+    // Check if all pots are OFF and user is trying to turn mixer ON
+    if (newMixerState && areAllPotsOff()) {
+        showNotification('Semua pot dalam status OFF. Aktifkan minimal satu pot sebelum mengaktifkan pengaduk larutan nutrisi.');
         return;
     }
 
