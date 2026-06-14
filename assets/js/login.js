@@ -39,7 +39,7 @@ document.getElementById('signInBtn').addEventListener('click', () => {
         .then((userCredential) => {
             console.log('User signed in:', userCredential.user);
             // Redirect to dashboard
-            window.location.href = '/dashboard/';
+            window.location.href = './dashboard/';
         })
         .catch((error) => {
             console.error('Sign in error:', error.message);
