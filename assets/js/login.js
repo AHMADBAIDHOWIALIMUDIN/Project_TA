@@ -21,7 +21,7 @@ const auth = getAuth(app);
 onAuthStateChanged(auth, (user) => {
     if (user) {
         // Redirect to dashboard if already logged in
-        window.location.href = '/dashboard/';
+        window.location.href = './dashboard/';
     }
 });
 
