@@ -188,7 +188,30 @@ function isLogObject(value) {
             lowerKey === 'light' ||
             lowerKey === 'timestamp' ||
             lowerKey === 'water_flow' ||
-            lowerKey === 'type';
+            lowerKey === 'waterflow' ||
+            lowerKey === 'type' ||
+            lowerKey === 'event_type' ||
+            lowerKey === 'activity_type' ||
+            lowerKey === 'source' ||
+            lowerKey === 'mode' ||
+            lowerKey === 'activity' ||
+            lowerKey === 'event' ||
+            lowerKey === 'action' ||
+            lowerKey === 'schedule_name' ||
+            lowerKey === 'schedule_id' ||
+            lowerKey === 'jadwal_name' ||
+            lowerKey === 'jadwal_id' ||
+            lowerKey === 'schedulename' ||
+            lowerKey === 'scheduleid' ||
+            lowerKey === 'pompa_air' ||
+            lowerKey === 'pompaair' ||
+            lowerKey === 'pompa_pupuk' ||
+            lowerKey === 'pompapupuk' ||
+            lowerKey === 'pompa_pengaduk' ||
+            lowerKey === 'pompapengaduk' ||
+            lowerKey === 'water_pump' ||
+            lowerKey === 'fertilizer_pump' ||
+            lowerKey === 'mixer_pump';
     });
 }
 
@@ -206,8 +229,8 @@ function parseLogObject(entry, context) {
     const light = normalizeLightValue(entry.ldr ?? entry.light ?? entry.cahaya);
     const waterFlow = normalizeNumber(entry.water_flow ?? entry.waterFlow ?? entry.flow);
     const status = resolveStatus(entry, waterFlow);
-    const source = entry.source ?? '-';
-    const type = entry.type ?? '-';
+    const source = entry.source ?? entry.mode ?? entry.activity ?? entry.event ?? '-';
+    const type = entry.type ?? entry.event_type ?? entry.activity_type ?? entry.action ?? '-';
     const potRows = extractPotRows(entry);
 
     if (potRows.length > 0) {
@@ -390,12 +413,31 @@ function normalizeLightValue(value) {
 }
 
 function resolveStatus(entry, waterFlow) {
-    const type = String(entry.type ?? '').toLowerCase();
-    if ((waterFlow ?? 0) > 0 || type.includes('water') || type.includes('siram')) {
+    const type = String(entry.type ?? '').toLowerCase().trim();
+    
+    // Deteksi Penyiraman: mode waktu atau sensor threshold
+    if (type.includes('waktu_jadwal') || type.includes('sensor_threshold')) {
         return 'Menyiram';
+    }
+    
+    // Deteksi Monitoring: auto_log
+    if (type === 'auto_log') {
+        return 'Normal';
     }
 
     return 'Normal';
+}
+
+function getActivityType(item) {
+    const status = item.status;
+    if (status === 'Menyiram') {
+        return 'Penyiraman';
+    }
+    return 'Monitoring';
+}
+
+function getActivityBadgeClass(activityType) {
+    return activityType === 'Penyiraman' ? 'activity-watering' : 'activity-monitoring';
 }
 
 function formatDisplayValue(value, suffix = '', decimals = 0) {
@@ -433,6 +475,10 @@ function displayHistoryData() {
         const potCell = Number.isFinite(item.pot)
             ? `<span class="pot-badge pot-${item.pot}-badge">Pot ${item.pot}</span>`
             : '-';
+        
+        const activityType = getActivityType(item);
+        const badgeClass = getActivityBadgeClass(activityType);
+        const activityBadge = `<span class="activity-badge ${badgeClass}">${activityType}</span>`;
 
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -441,6 +487,7 @@ function displayHistoryData() {
             <td>${formatDisplayValue(item.temp, ' C', 1)}</td>
             <td>${formatDisplayValue(item.light, '%')}</td>
             <td>${formatDisplayValue(item.moisture, '%')}</td>
+            <td>${activityBadge}</td>
         `;
         tbody.appendChild(row);
     });

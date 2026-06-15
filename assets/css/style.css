@@ -4096,6 +4096,25 @@ input:checked + .slider:before {
     background: #a16207; /* Coklat */
 }
 
+/* Activity Type Badges */
+.activity-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.activity-monitoring {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.activity-watering {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
 .setting-body {
     display: flex;
     flex-direction: column;
