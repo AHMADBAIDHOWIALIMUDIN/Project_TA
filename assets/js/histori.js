@@ -19,39 +19,15 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const database = getDatabase(app);
 const historyRef = ref(database, 'history');
-const kontrolRef = ref(database, 'kontrol_1');
 
 let listenersInitialized = false;
 let stopHistorySubscription = null;
-let stopKontrolSubscription = null;
 
 // Initialize history state
 let historyData = [];
 let filteredData = [];
 let currentPage = 1;
 let itemsPerPage = 20;
-
-// Jadwal and Threshold data for pot filtering
-let schedulePotsMap = {}; // Maps jadwal_id -> [pot1, pot2, ...]
-let thresholdPotsMap = {}; // Maps threshold_id -> [pot1, pot2, ...]
-let scheduleDataMap = {}; // Maps jadwal_id -> {name, time, duration, pots}
-
-// Helper function untuk get last active schedule dari storage
-function getLastActiveSchedule() {
-    try {
-        const stored = sessionStorage.getItem('lastActiveSchedule');
-        if (stored) {
-            const data = JSON.parse(stored);
-            // Hanya gunakan jika masih fresh (dalam 10 menit)
-            if (Date.now() - data.timestamp < 600000) {
-                return data.scheduleId;
-            }
-        }
-    } catch (e) {
-        // Ignore parse errors
-    }
-    return null;
-}
 
 // Notification function
 function showNotification(message, type = 'success') {
@@ -84,53 +60,6 @@ function setElementHidden(id, hiddenValue) {
     if (element) {
         element.hidden = hiddenValue;
     }
-}
-
-// Load jadwal and threshold data from Firebase
-function loadScheduleAndThresholdData() {
-    if (typeof stopKontrolSubscription === 'function') {
-        stopKontrolSubscription();
-        stopKontrolSubscription = null;
-    }
-
-    stopKontrolSubscription = onValue(kontrolRef, (snapshot) => {
-        schedulePotsMap = {};
-        thresholdPotsMap = {};
-        scheduleDataMap = {};
-
-        if (!snapshot.exists()) {
-            return;
-        }
-
-        const kontrolData = snapshot.val();
-
-        // Extract schedules (jadwal_*)
-        Object.entries(kontrolData).forEach(([key, value]) => {
-            if (key.match(/^jadwal_\d+$/i) && value && typeof value === 'object') {
-                const pots = extractPotsFromData(value.pot_aktif);
-                if (pots.length > 0) {
-                    schedulePotsMap[key] = pots;
-                    // Store full schedule data untuk timing matching
-                    scheduleDataMap[key] = {
-                        name: value.nama || value.name || `Jadwal ${key.replace('jadwal_', '')}`,
-                        time: value.waktu || value.time || '',
-                        duration: Number(value.durasi || value.duration || 30),
-                        pots: pots
-                    };
-                }
-            }
-
-            // Extract thresholds (threshold_*)
-            if (key.match(/^threshold_\d+$/i) && value && typeof value === 'object') {
-                const pots = extractPotsFromData(value.pot_aktif);
-                if (pots.length > 0) {
-                    thresholdPotsMap[key] = pots;
-                }
-            }
-        });
-    }, (error) => {
-        console.error('Gagal membaca data kontrol:', error);
-    });
 }
 
 // Extract pot numbers from pot_aktif data
@@ -179,51 +108,29 @@ function extractPotsFromData(potAktif) {
     return Array.from(new Set(pots));
 }
 
-// Get allowed pots for a given schedule/threshold
+// Get allowed pots for a given event (Self-Contained & Immutable)
 function getAllowedPotsForEvent(entry) {
-    // Check for schedule ID (jika backend menyimpannya)
-    const scheduleId = entry.jadwal_id ?? entry.schedule_id ?? entry.jadwalId ?? entry.scheduleId;
-    if (scheduleId && schedulePotsMap[scheduleId]) {
-        console.log(`✅ Event mengandung jadwal_id: ${scheduleId}`);
-        return schedulePotsMap[scheduleId];
+    // 1. PRIMARY: Extract directly from 'pots' array or object in the history entry
+    if (entry.pots !== undefined && entry.pots !== null) {
+        const extractedPots = extractPotsFromData(entry.pots);
+        if (extractedPots.length > 0) {
+            console.log(`✅ Using self-contained pots data:`, extractedPots);
+            return extractedPots;
+        }
     }
 
-    // Check for threshold ID
-    const thresholdId = entry.threshold_id ?? entry.thresholdId;
-    if (thresholdId && thresholdPotsMap[thresholdId]) {
-        console.log(`✅ Event mengandung threshold_id: ${thresholdId}`);
-        return thresholdPotsMap[thresholdId];
-    }
-
-    // FALLBACK 1: Infer dari sensor data yang ada di event
-    // Jika hanya soil_1 dan soil_2 yang ada, berarti Pot 1 dan 2 yang disiram
+    // 2. FALLBACK FOR VERY OLD HISTORY
+    // If there is no 'pots' data, fallback to inferring from attached sensor data
     const type = String(entry.type ?? '').toLowerCase().trim();
     if (type.includes('waktu_jadwal') || type.includes('sensor_threshold')) {
         const potsWithData = extractPotsWithSensorData(entry);
-        if (potsWithData.length > 0 && potsWithData.length < 5) {
-            console.log(`🔍 Inferred pots dari sensor data:`, potsWithData);
+        if (potsWithData.length > 0) {
+            console.log(`🔍 Inferred pots dari sensor data (fallback):`, potsWithData);
             return potsWithData;
         }
     }
 
-    // FALLBACK 2: Cek last active schedule dari sessionStorage
-    if (type.includes('waktu_jadwal')) {
-        const lastScheduleId = getLastActiveSchedule();
-        if (lastScheduleId && schedulePotsMap[lastScheduleId]) {
-            console.log(`📋 Using last active schedule: ${lastScheduleId}`);
-            return schedulePotsMap[lastScheduleId];
-        }
-
-        // FALLBACK 3: Timing-based matching sebagai last resort
-        const eventTime = extractEventTime(entry);
-        const matchedPots = findScheduleByTiming(eventTime);
-        if (matchedPots) {
-            console.log(`⏰ Using timing-based matching: ${eventTime.hours}:${String(eventTime.minutes).padStart(2, '0')}`);
-            return matchedPots;
-        }
-    }
-
-    console.log(`❓ Event tidak bisa di-filter (tidak ada jadwal_id atau sensor data)`);
+    console.log(`❓ Event tidak bisa di-filter (tidak ada info pot)`);
     return null;
 }
 
@@ -249,79 +156,6 @@ function extractPotsWithSensorData(entry) {
     });
 
     return potsWithData.sort((a, b) => a - b);
-}
-
-// Extract waktu dari entry untuk timing matching
-function extractEventTime(entry) {
-    if (entry.time) {
-        const timeStr = String(entry.time);
-        const match = timeStr.match(/^(\d{2}):(\d{2})/);
-        if (match) {
-            return {
-                hours: parseInt(match[1], 10),
-                minutes: parseInt(match[2], 10)
-            };
-        }
-    }
-
-    if (entry.timestamp) {
-        const date = new Date(normalizeTimestamp(entry.timestamp));
-        return {
-            hours: date.getHours(),
-            minutes: date.getMinutes()
-        };
-    }
-
-    return null;
-}
-
-// Find schedule berdasarkan waktu event
-function findScheduleByTiming(eventTime) {
-    if (!eventTime) {
-        return null;
-    }
-
-    const eventMinutes = eventTime.hours * 60 + eventTime.minutes;
-
-    // Iterate schedulePotsMap untuk cari yang cocok
-    for (const [scheduleId, pots] of Object.entries(schedulePotsMap)) {
-        const schedule = findScheduleDataById(scheduleId);
-        if (!schedule || !schedule.time) {
-            continue;
-        }
-
-        // Parse jadwal time (format: "HH:MM")
-        const timeMatch = schedule.time.match(/^(\d{2}):(\d{2})/);
-        if (!timeMatch) {
-            continue;
-        }
-
-        const scheduleHours = parseInt(timeMatch[1], 10);
-        const scheduleMinutes = parseInt(timeMatch[2], 10);
-        const scheduleStartMinutes = scheduleHours * 60 + scheduleMinutes;
-
-        // Durasi jadwal (default 30 detik jika tidak ada)
-        const durationSeconds = schedule.duration || 30;
-        const durationMinutes = Math.ceil(durationSeconds / 60);
-        const scheduleEndMinutes = scheduleStartMinutes + durationMinutes;
-
-        // Check apakah event time berada dalam range jadwal
-        // Tambah buffer 2 menit sebelum dan sesudah untuk tolerance
-        const toleranceMinutes = 2;
-        if (
-            eventMinutes >= scheduleStartMinutes - toleranceMinutes &&
-            eventMinutes <= scheduleEndMinutes + toleranceMinutes
-        ) {
-            return pots;
-        }
-    }
-
-    return null;
-}
-
-// Find schedule data dari scheduleDataMap
-function findScheduleDataById(scheduleId) {
-    return scheduleDataMap[scheduleId] || null;
 }
 
 // Authentication check
@@ -370,7 +204,6 @@ function initializeHistory() {
         listenersInitialized = true;
     }
 
-    loadScheduleAndThresholdData();
     loadHistoryFromFirebase();
 }
 
@@ -494,10 +327,10 @@ function parseLogObject(entry, context) {
     const status = resolveStatus(entry, waterFlow);
     const source = entry.source ?? entry.mode ?? entry.activity ?? entry.event ?? '-';
     const type = entry.type ?? entry.event_type ?? entry.activity_type ?? entry.action ?? '-';
-    
+
     // Get allowed pots for filtering based on schedule/threshold
     const allowedPots = getAllowedPotsForEvent(entry);
-    
+
     // DEBUG: Log penyiraman events untuk melihat struktur data
     if (type && (String(type).toLowerCase().includes('waktu_jadwal') || String(type).toLowerCase().includes('sensor_threshold'))) {
         console.log('🔍 Penyiraman Event:', {
@@ -509,7 +342,7 @@ function parseLogObject(entry, context) {
             allKeys: Object.keys(entry)
         });
     }
-    
+
     const potRows = extractPotRows(entry, allowedPots);
 
     if (potRows.length > 0) {
@@ -698,12 +531,12 @@ function normalizeLightValue(value) {
 
 function resolveStatus(entry, waterFlow) {
     const type = String(entry.type ?? '').toLowerCase().trim();
-    
+
     // Deteksi Penyiraman: mode waktu atau sensor threshold
     if (type.includes('waktu_jadwal') || type.includes('sensor_threshold')) {
         return 'Menyiram';
     }
-    
+
     // Deteksi Monitoring: auto_log
     if (type === 'auto_log') {
         return 'Normal';
@@ -759,7 +592,7 @@ function displayHistoryData() {
         const potCell = Number.isFinite(item.pot)
             ? `<span class="pot-badge pot-${item.pot}-badge">Pot ${item.pot}</span>`
             : '-';
-        
+
         const activityType = getActivityType(item);
         const badgeClass = getActivityBadgeClass(activityType);
         const activityBadge = `<span class="activity-badge ${badgeClass}">${activityType}</span>`;
@@ -848,7 +681,7 @@ function setupPagination() {
     // Entries per page
     const entriesSelect = document.getElementById('entriesPerPage');
     if (entriesSelect) {
-        entriesSelect.addEventListener('change', function() {
+        entriesSelect.addEventListener('change', function () {
             itemsPerPage = parseInt(this.value, 10);
             currentPage = 1;
             displayHistoryData();
